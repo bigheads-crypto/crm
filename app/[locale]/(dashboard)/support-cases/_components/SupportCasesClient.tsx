@@ -71,6 +71,10 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<SupportCase | null>(null)
   const [deleteRow, setDeleteRow] = useState<SupportCase | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sortKey, setSortKey] = useState('last_contact_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const canEdit = ['admin', 'support'].includes(role)
   const canDelete = role === 'admin'
@@ -83,10 +87,10 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
     let query = supabase.from('Support Case').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
     if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,last_agent.ilike.%${search}%`)
-    query = query.order('last_contact_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, filter])
+  }, [page, search, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -128,6 +132,9 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
         onEdit={canEdit ? (row) => openEdit(row as unknown as SupportCase) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as SupportCase) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj sprawę"
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj sprawę' : 'Nowa sprawa'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">

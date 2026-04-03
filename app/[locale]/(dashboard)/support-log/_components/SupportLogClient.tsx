@@ -28,16 +28,20 @@ export function SupportLogClient({ initialData, initialCount, role }: Props) {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [detailRow, setDetailRow] = useState<SupportLog | null>(null)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
     let query = supabase.from('Support Log').select('*', { count: 'exact' })
     if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,support_agent.ilike.%${search}%`)
-    query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search])
+  }, [page, search, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -60,6 +64,9 @@ export function SupportLogClient({ initialData, initialCount, role }: Props) {
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
         searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}
         loading={loading} canEdit={false} canDelete={false}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       {/* Modal z detalami rozmowy */}
       <Modal open={!!detailRow} onClose={() => setDetailRow(null)} title={`Rozmowa — ${detailRow?.clients_name ?? detailRow?.phone}`} size="lg">

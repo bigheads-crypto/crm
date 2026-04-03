@@ -70,6 +70,10 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<OLXCandidate | null>(null)
   const [deleteRow, setDeleteRow] = useState<OLXCandidate | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const canEdit = ['admin', 'hr'].includes(role)
   const canDelete = role === 'admin'
@@ -81,10 +85,10 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('OLX').select('*', { count: 'exact' })
     if (search) query = query.or(`name.ilike.%${search}%,position.ilike.%${search}%`)
-    query = query.order('id', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search])
+  }, [page, search, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -132,6 +136,9 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
         onEdit={canEdit ? (row) => openEdit(row as unknown as OLXCandidate) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as OLXCandidate) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj kandydata"
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj kandydata' : 'Nowy kandydat'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">

@@ -38,11 +38,11 @@ const COLUMNS: Column<SalesQuality>[] = [
 ]
 
 function RatingBadge({ rating }: { rating: number }) {
-  const color = rating >= 7 ? '#22c55e' : rating >= 4 ? '#f59e0b' : '#ef4444'
+  const color = rating >= 70 ? '#22c55e' : rating >= 40 ? '#f59e0b' : '#ef4444'
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
       style={{ backgroundColor: `${color}1a`, color }}>
-      {rating}/10
+      {rating}/100
     </span>
   )
 }
@@ -74,6 +74,10 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<SalesQuality | null>(null)
   const [deleteRow, setDeleteRow] = useState<SalesQuality | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const canEdit = ['admin', 'handlowiec'].includes(role)
   const canDelete = role === 'admin'
@@ -85,12 +89,12 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales Quality').select('*', { count: 'exact' })
     if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,salesman.ilike.%${search}%`)
-    query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
-  }, [page, search])
+  }, [page, search, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -130,6 +134,9 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
         onEdit={canEdit ? (row) => openEdit(row as unknown as SalesQuality) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as SalesQuality) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj ocenę"
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj ocenę' : 'Nowa ocena'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
@@ -137,7 +144,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
           <FormField label="Klient"><input {...register('clients_name')} style={inputStyle} /></FormField>
           <FormField label="Handlowiec"><input {...register('salesman')} style={inputStyle} /></FormField>
           <FormField label="Kategoria"><input {...register('category')} style={inputStyle} /></FormField>
-          <FormField label="Ocena (0-10)" error={errors.rating?.message}><input {...register('rating')} type="number" min="0" max="10" style={inputStyle} /></FormField>
+          <FormField label="Ocena (0-100)" error={errors.rating?.message}><input {...register('rating')} type="number" min="0" max="100" style={inputStyle} /></FormField>
           <FormField label="Czas trwania (s)"><input {...register('duration')} type="number" style={inputStyle} /></FormField>
           <FormField label="Silnik"><input {...register('detected_engine')} style={inputStyle} /></FormField>
           <FormField label="ID transakcji"><input {...register('deal_id')} type="number" style={inputStyle} /></FormField>

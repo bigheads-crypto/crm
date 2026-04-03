@@ -35,6 +35,10 @@ export function SupportTextLogClient({ initialData, initialCount, role }: Props)
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -42,10 +46,10 @@ export function SupportTextLogClient({ initialData, initialCount, role }: Props)
     let query = supabase.from('Support Text Log').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('direction', filter)
     if (search) query = query.or(`phone.ilike.%${search}%,summary.ilike.%${search}%`)
-    query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, filter])
+  }, [page, search, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -77,6 +81,9 @@ export function SupportTextLogClient({ initialData, initialCount, role }: Props)
         searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
         loading={loading} canEdit={false} canDelete={false}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       {expandedId && (() => {
         const msg = data.find(d => d.id === expandedId)

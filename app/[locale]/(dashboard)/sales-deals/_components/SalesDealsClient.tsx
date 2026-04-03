@@ -80,6 +80,10 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<SalesDeal | null>(null)
   const [deleteRow, setDeleteRow] = useState<SalesDeal | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const canEdit = ['admin', 'handlowiec'].includes(role)
   const canDelete = role === 'admin'
@@ -92,12 +96,12 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     let query = supabase.from('Sales Deals').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
     if (search) query = query.or(`client_name.ilike.%${search}%,phone.ilike.%${search}%,salesman.ilike.%${search}%`)
-    query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
-  }, [page, search, filter])
+  }, [page, search, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -156,6 +160,9 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
         canEdit={canEdit}
         canDelete={canDelete}
         addLabel="Dodaj transakcję"
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj transakcję' : 'Nowa transakcja'} size="lg">

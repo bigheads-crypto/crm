@@ -73,6 +73,10 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<Machine | null>(null)
   const [deleteRow, setDeleteRow] = useState<Machine | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   // Logistyka tylko odczyt
   const canEdit = ['admin', 'handlowiec'].includes(role)
@@ -85,10 +89,10 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Machines').select('*', { count: 'exact' })
     if (search) query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,serial_number.ilike.%${search}%,engine.ilike.%${search}%`)
-    query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search])
+  }, [page, search, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -130,6 +134,9 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
         onEdit={canEdit ? (row) => openEdit(row as unknown as Machine) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Machine) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj maszynę"
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj maszynę' : 'Nowa maszyna'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">

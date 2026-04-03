@@ -72,6 +72,10 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<Sale | null>(null)
   const [deleteRow, setDeleteRow] = useState<Sale | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   // Logistyka ma tylko odczyt
   const canEdit = ['admin', 'handlowiec'].includes(role)
@@ -85,10 +89,10 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
     let query = supabase.from('Sales').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('sale_status', filter)
     if (search) query = query.or(`phone.ilike.%${search}%,company.ilike.%${search}%,tracking_number.ilike.%${search}%`)
-    query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, filter])
+  }, [page, search, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -133,6 +137,9 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
         onEdit={canEdit ? (row) => openEdit(row as unknown as Sale) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Sale) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj zamówienie"
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSort}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj zamówienie' : 'Nowe zamówienie'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
