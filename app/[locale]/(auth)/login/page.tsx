@@ -95,9 +95,10 @@ export default function LoginPage({
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative"
       style={{ backgroundColor: 'var(--bg)' }}
     >
+      <span className="absolute bottom-4 right-4 text-xs" style={{ color: 'var(--text-muted)' }}>v1.0</span>
       <div
         className="w-full max-w-sm rounded-2xl p-8 shadow-2xl"
         style={{

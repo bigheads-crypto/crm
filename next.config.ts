@@ -5,7 +5,7 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 const nextConfig: NextConfig = {
-  // Konfiguracja dla self-hosted Supabase (bez weryfikacji SSL dla sieci lokalnej)
+  allowedDevOrigins: ['10.10.1.201', '10.10.1.201:9999'],
   images: {
     remotePatterns: [
       {
