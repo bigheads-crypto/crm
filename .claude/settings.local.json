@@ -8,7 +8,8 @@
       "Bash(do)",
       "Bash(sed -i 's/columns={COLUMNS as Column<Record<string, unknown>>\\\\[\\\\]}/columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}/' \"$f\")",
       "Bash(done)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(xargs sed:*)"
     ]
   }
 }

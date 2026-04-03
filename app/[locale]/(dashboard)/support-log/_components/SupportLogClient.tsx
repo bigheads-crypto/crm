@@ -32,7 +32,7 @@ export function SupportLogClient({ initialData, initialCount, role }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    let query = supabase.from('SupportLog').select('*', { count: 'exact' })
+    let query = supabase.from('Support Log').select('*', { count: 'exact' })
     if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,support_agent.ilike.%${search}%`)
     query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query

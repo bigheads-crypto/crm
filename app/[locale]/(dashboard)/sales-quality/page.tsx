@@ -9,7 +9,7 @@ export default async function SalesQualityPage() {
   const role = (profile?.role ?? 'handlowiec') as Role
 
   const { data, count } = await supabase
-    .from('SalesQuality')
+    .from('Sales Quality')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(0, 24)

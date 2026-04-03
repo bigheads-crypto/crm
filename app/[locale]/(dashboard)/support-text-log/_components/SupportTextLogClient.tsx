@@ -39,7 +39,7 @@ export function SupportTextLogClient({ initialData, initialCount, role }: Props)
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    let query = supabase.from('SupportTextLog').select('*', { count: 'exact' })
+    let query = supabase.from('Support Text Log').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('direction', filter)
     if (search) query = query.or(`phone.ilike.%${search}%,summary.ilike.%${search}%`)
     query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)

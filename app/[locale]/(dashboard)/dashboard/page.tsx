@@ -118,13 +118,13 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     // Aktywne transakcje (status != 'closed')
     supabase
-      .from('SalesDeals')
+      .from('Sales Deals')
       .select('*', { count: 'exact', head: true })
       .neq('status', 'closed'),
 
     // Otwarte sprawy supportu
     supabase
-      .from('SupportCase')
+      .from('Support Case')
       .select('*', { count: 'exact', head: true })
       .neq('status', 'closed'),
 
@@ -141,27 +141,27 @@ export default async function DashboardPage() {
 
     // Ostatnie 5 transakcji sprzedażowych
     supabase
-      .from('SalesDeals')
+      .from('Sales Deals')
       .select('id, client_name, status, created_at')
       .order('created_at', { ascending: false })
       .limit(5),
 
     // Ostatnie 5 spraw supportu
     supabase
-      .from('SupportCase')
+      .from('Support Case')
       .select('id, clients_name, status, created_at')
       .order('created_at', { ascending: false })
       .limit(5),
 
     // Dane dla wykresu SalesDeals — ostatnie 8 tygodni
     supabase
-      .from('SalesDeals')
+      .from('Sales Deals')
       .select('created_at')
       .gte('created_at', new Date(Date.now() - 8 * 7 * 86400000).toISOString()),
 
     // Dane dla wykresu SupportCase — ostatnie 8 tygodni
     supabase
-      .from('SupportCase')
+      .from('Support Case')
       .select('created_at')
       .gte('created_at', new Date(Date.now() - 8 * 7 * 86400000).toISOString()),
   ])

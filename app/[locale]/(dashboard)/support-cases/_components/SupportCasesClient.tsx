@@ -80,7 +80,7 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    let query = supabase.from('SupportCase').select('*', { count: 'exact' })
+    let query = supabase.from('Support Case').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
     if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,last_agent.ilike.%${search}%`)
     query = query.order('last_contact_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
@@ -98,15 +98,15 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
-    if (editRow) { await supabase.from('SupportCase').update(values).eq('id', editRow.id) }
-    else { await supabase.from('SupportCase').insert(values) }
+    if (editRow) { await supabase.from('Support Case').update(values).eq('id', editRow.id) }
+    else { await supabase.from('Support Case').insert(values) }
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('SupportCase').delete().eq('id', deleteRow.id)
+    await createClient().from('Support Case').delete().eq('id', deleteRow.id)
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 

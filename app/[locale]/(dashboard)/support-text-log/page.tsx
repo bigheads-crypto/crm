@@ -9,7 +9,7 @@ export default async function SupportTextLogPage() {
   const role = (profile?.role ?? 'support') as Role
 
   const { data, count } = await supabase
-    .from('SupportTextLog')
+    .from('Support Text Log')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(0, 24)

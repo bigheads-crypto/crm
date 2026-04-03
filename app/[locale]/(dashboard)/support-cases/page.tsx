@@ -9,7 +9,7 @@ export default async function SupportCasesPage() {
   const role = (profile?.role ?? 'support') as Role
 
   const { data, count } = await supabase
-    .from('SupportCase')
+    .from('Support Case')
     .select('*', { count: 'exact' })
     .order('last_contact_at', { ascending: false })
     .range(0, 24)

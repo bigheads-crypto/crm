@@ -9,7 +9,7 @@ export default async function SalesTextLogPage() {
   const role = (profile?.role ?? 'handlowiec') as Role
 
   const { data, count } = await supabase
-    .from('SalesTextLog')
+    .from('Sales Text Log')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(0, 24)

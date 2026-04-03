@@ -83,7 +83,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    let query = supabase.from('SalesQuality').select('*', { count: 'exact' })
+    let query = supabase.from('Sales Quality').select('*', { count: 'exact' })
     if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,salesman.ilike.%${search}%`)
     query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
@@ -103,15 +103,15 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
     const payload = { ...values, rating: values.rating ? Number(values.rating) : null, duration: values.duration ? Number(values.duration) : null, deal_id: values.deal_id ? Number(values.deal_id) : null }
-    if (editRow) { await supabase.from('SalesQuality').update(payload).eq('id', editRow.id) }
-    else { await supabase.from('SalesQuality').insert(payload) }
+    if (editRow) { await supabase.from('Sales Quality').update(payload).eq('id', editRow.id) }
+    else { await supabase.from('Sales Quality').insert(payload) }
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('SalesQuality').delete().eq('id', deleteRow.id)
+    await createClient().from('Sales Quality').delete().eq('id', deleteRow.id)
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 

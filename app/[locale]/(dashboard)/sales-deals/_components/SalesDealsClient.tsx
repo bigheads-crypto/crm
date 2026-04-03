@@ -89,7 +89,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    let query = supabase.from('SalesDeals').select('*', { count: 'exact' })
+    let query = supabase.from('Sales Deals').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
     if (search) query = query.or(`client_name.ilike.%${search}%,phone.ilike.%${search}%,salesman.ilike.%${search}%`)
     query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
@@ -107,9 +107,9 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
     if (editRow) {
-      await supabase.from('SalesDeals').update(values).eq('id', editRow.id)
+      await supabase.from('Sales Deals').update(values).eq('id', editRow.id)
     } else {
-      await supabase.from('SalesDeals').insert(values)
+      await supabase.from('Sales Deals').insert(values)
     }
     setModalOpen(false)
     fetchData()
@@ -119,7 +119,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     if (!deleteRow) return
     setDeleteLoading(true)
     const supabase = createClient()
-    await supabase.from('SalesDeals').delete().eq('id', deleteRow.id)
+    await supabase.from('Sales Deals').delete().eq('id', deleteRow.id)
     setDeleteRow(null)
     setDeleteLoading(false)
     fetchData()
