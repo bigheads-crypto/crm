@@ -33,7 +33,7 @@ const COLUMNS: Column<SalesDeal>[] = [
   { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—' },
   { key: 'category', header: 'Kategoria' },
   { key: 'detected_engine', header: 'Silnik' },
-  { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
+  { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
 ]
 
 function StatusBadge({ status }: { status: string }) {
@@ -73,7 +73,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -95,13 +95,15 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales Deals').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
-    if (search) query = query.or(`client_name.ilike.%${search}%,phone.ilike.%${search}%,salesman.ilike.%${search}%`)
+    Object.entries(columnFilters).forEach(([key, value]) => {
+      if (value.trim()) query = query.ilike(key, `%${value.trim()}%`)
+    })
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
-  }, [page, search, filter, sortKey, sortDir])
+  }, [page, columnFilters, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 

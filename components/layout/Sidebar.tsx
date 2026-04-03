@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/lib/supabase/types'
+import { APP_VERSION } from '@/lib/version'
 
 interface NavItem {
   key: string
@@ -173,19 +174,23 @@ export function Sidebar({ role, locale }: SidebarProps) {
         })}
       </nav>
 
-      {/* Przycisk zwijania */}
-      <div
-        className="flex-shrink-0 p-2"
-        style={{ borderTop: '1px solid var(--border)' }}
-      >
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center rounded-lg p-2 transition-colors"
-          style={{ color: 'var(--text-dim)' }}
-          title={collapsed ? 'Rozwiń sidebar' : 'Zwiń sidebar'}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+      {/* Wersja + przycisk zwijania */}
+      <div className="flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+        {!collapsed && (
+          <div className="px-4 pt-2 pb-0 text-center">
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>v{APP_VERSION}</span>
+          </div>
+        )}
+        <div className="p-2">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex w-full items-center justify-center rounded-lg p-2 transition-colors"
+            style={{ color: 'var(--text-dim)' }}
+            title={collapsed ? 'Rozwiń sidebar' : 'Zwiń sidebar'}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
       </div>
     </aside>
   )

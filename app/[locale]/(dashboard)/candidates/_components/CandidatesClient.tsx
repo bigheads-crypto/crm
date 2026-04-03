@@ -64,7 +64,7 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<OLXCandidate | null>(null)

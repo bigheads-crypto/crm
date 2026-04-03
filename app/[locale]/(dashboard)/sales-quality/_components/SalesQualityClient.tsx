@@ -30,11 +30,11 @@ const COLUMNS: Column<SalesQuality>[] = [
   { key: 'clients_name', header: 'Klient' },
   { key: 'phone', header: 'Telefon' },
   { key: 'salesman', header: 'Handlowiec' },
-  { key: 'rating', header: 'Ocena', render: (v) => v != null ? <RatingBadge rating={Number(v)} /> : '—' },
+  { key: 'rating', header: 'Ocena', render: (v) => v != null ? <RatingBadge rating={Number(v)} /> : '—', filterable: false },
   { key: 'category', header: 'Kategoria' },
   { key: 'detected_engine', header: 'Silnik' },
-  { key: 'duration', header: 'Czas (s)' },
-  { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
+  { key: 'duration', header: 'Czas (s)', filterable: false },
+  { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
 ]
 
 function RatingBadge({ rating }: { rating: number }) {
@@ -68,7 +68,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<SalesQuality | null>(null)
@@ -88,13 +88,15 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
     setLoading(true)
     const supabase = createClient()
     let query = supabase.from('Sales Quality').select('*', { count: 'exact' })
-    if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,salesman.ilike.%${search}%`)
+    Object.entries(columnFilters).forEach(([key, value]) => {
+      if (value.trim()) query = query.ilike(key, `%${value.trim()}%`)
+    })
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
-  }, [page, search, sortKey, sortDir])
+  }, [page, columnFilters, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 

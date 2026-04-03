@@ -64,7 +64,7 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)

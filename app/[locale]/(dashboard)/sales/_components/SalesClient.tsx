@@ -33,8 +33,8 @@ const COLUMNS: Column<Sale>[] = [
   { key: 'company', header: 'Firma' },
   { key: 'sale_status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—' },
   { key: 'tracking_number', header: 'Nr śledzenia' },
-  { key: 'machine_id', header: 'ID maszyny' },
-  { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
+  { key: 'machine_id', header: 'ID maszyny', filterable: false },
+  { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
 ]
 
 function StatusBadge({ status }: { status: string }) {
@@ -65,7 +65,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -88,11 +88,13 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('sale_status', filter)
-    if (search) query = query.or(`phone.ilike.%${search}%,company.ilike.%${search}%,tracking_number.ilike.%${search}%`)
+    Object.entries(columnFilters).forEach(([key, value]) => {
+      if (value.trim()) query = query.ilike(key, `%${value.trim()}%`)
+    })
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, filter, sortKey, sortDir])
+  }, [page, columnFilters, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
