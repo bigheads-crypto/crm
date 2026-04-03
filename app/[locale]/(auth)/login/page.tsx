@@ -2,7 +2,7 @@
 
 // Strona logowania — formularz email + hasło z Supabase Auth
 
-import { useState } from 'react'
+import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useForm } from 'react-hook-form'
@@ -44,8 +44,8 @@ export default function LoginPage({
 }: {
   params: Promise<{ locale: string }>
 }) {
-  // Odczyt locale przez React.use() w Client Component
-  const { locale } = require('react').use(params) as { locale: string }
+  // Odczyt locale przez use() w Client Component (React 19)
+  const { locale } = use(params)
 
   const router = useRouter()
   const t = useTranslations('auth')
