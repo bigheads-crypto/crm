@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { APP_VERSION } from '@/lib/version'
 import type { Role } from '@/lib/supabase/types'
 
 // Schemat walidacji formularza
@@ -98,7 +99,7 @@ export default function LoginPage({
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{ backgroundColor: 'var(--bg)' }}
     >
-      <span className="absolute bottom-4 right-4 text-xs" style={{ color: 'var(--text-muted)' }}>v1.0</span>
+      <span className="absolute bottom-4 right-4 text-xs" style={{ color: 'var(--text-muted)' }}>v{APP_VERSION}</span>
       <div
         className="w-full max-w-sm rounded-2xl p-8 shadow-2xl"
         style={{
@@ -123,7 +124,7 @@ export default function LoginPage({
         </div>
 
         {/* Formularz */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} method="post" className="flex flex-col gap-4">
           {/* Email */}
           <div className="flex flex-col gap-1.5">
             <label
