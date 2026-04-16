@@ -84,11 +84,10 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
     setLoading(true)
     const supabase = createClient()
     let query = supabase.from('OLX').select('*', { count: 'exact' })
-    if (search) query = query.or(`name.ilike.%${search}%,position.ilike.%${search}%`)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, sortKey, sortDir])
+  }, [page, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -131,7 +130,6 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
         data={data as unknown as Record<string, unknown>[]}
         columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}
         onAdd={canEdit ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as OLXCandidate) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as OLXCandidate) : undefined}

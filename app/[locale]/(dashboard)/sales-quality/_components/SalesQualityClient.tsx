@@ -131,7 +131,6 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
         data={data as unknown as Record<string, unknown>[]}
         columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}
         onAdd={canEdit ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as SalesQuality) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as SalesQuality) : undefined}

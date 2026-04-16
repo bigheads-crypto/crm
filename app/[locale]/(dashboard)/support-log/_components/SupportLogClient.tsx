@@ -37,11 +37,10 @@ export function SupportLogClient({ initialData, initialCount, role }: Props) {
     setLoading(true)
     const supabase = createClient()
     let query = supabase.from('Support Log').select('*', { count: 'exact' })
-    if (search) query = query.or(`clients_name.ilike.%${search}%,phone.ilike.%${search}%,support_agent.ilike.%${search}%`)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, sortKey, sortDir])
+  }, [page, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -62,7 +61,6 @@ export function SupportLogClient({ initialData, initialCount, role }: Props) {
         data={data as unknown as Record<string, unknown>[]}
         columns={columnsWithDetail as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}
         loading={loading} canEdit={false} canDelete={false}
         sortKey={sortKey}
         sortDir={sortDir}

@@ -150,8 +150,6 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
         page={page}
         onPageChange={setPage}
         pageSize={PAGE_SIZE}
-        searchValue={search}
-        onSearchChange={(v) => { setSearch(v); setPage(1) }}
         filterTabs={filterTabs}
         activeFilter={filter}
         onFilterChange={(v) => { setFilter(v); setPage(1) }}

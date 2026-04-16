@@ -46,11 +46,10 @@ export function SalesTextLogClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales Text Log').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('direction', filter)
-    if (search) query = query.or(`phone.ilike.%${search}%,summary.ilike.%${search}%`)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, search, filter, sortKey, sortDir])
+  }, [page, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -83,7 +82,6 @@ export function SalesTextLogClient({ initialData, initialCount, role }: Props) {
         data={data as unknown as Record<string, unknown>[]}
         columns={columnsWithExpand as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
         loading={loading} canEdit={false} canDelete={false}
         sortKey={sortKey}

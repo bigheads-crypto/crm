@@ -8,7 +8,7 @@ export interface Column<T> {
   key: keyof T | string
   header: string
   render?: (value: unknown, row: T) => React.ReactNode
-  defaultWidth?: number
+  width?: string
   sortable?: boolean
   filterable?: boolean
 }
@@ -178,7 +178,7 @@ export function DataTable<T extends Record<string, unknown>>({
             {columns.map(col => (
               <col
                 key={String(col.key)}
-                style={{ width: colWidths[String(col.key)] ? `${colWidths[String(col.key)]}px` : col.defaultWidth ? `${col.defaultWidth}px` : undefined }}
+                style={{ width: colWidths[String(col.key)] ? `${colWidths[String(col.key)]}px` : col.width ?? undefined }}
               />
             ))}
             {showActions && <col style={{ width: '80px' }} />}
