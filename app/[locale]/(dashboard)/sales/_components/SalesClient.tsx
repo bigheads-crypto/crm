@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,6 +8,7 @@ import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
+import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { Sale, Role } from '@/lib/supabase/types'
 
 const schema = z.object({
@@ -27,18 +28,8 @@ type FormData = z.infer<typeof schema>
 const STATUS_OPTIONS = ['new', 'processing', 'shipped', 'delivered', 'cancelled']
 const PAGE_SIZE = 25
 
-const COLUMNS: Column<Sale>[] = [
-  { key: 'phone', header: 'Telefon' },
-  { key: 'salesman', header: 'Handlowiec' },
-  { key: 'company', header: 'Firma' },
-  { key: 'sale_status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—' },
-  { key: 'tracking_number', header: 'Nr śledzenia' },
-  { key: 'machine_id', header: 'ID maszyny', filterable: false },
-  { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
-]
-
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = { new: '#4f6ef7', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444' }
+  const colors: Record<string, string> = { new: '#ef7f1a', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444' }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
       style={{ backgroundColor: `${colors[status] ?? '#6b7280'}1a`, color: colors[status] ?? '#6b7280' }}>
@@ -65,7 +56,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -74,8 +65,24 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [salesmen, setSalesmen] = useState<string[]>([])
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
+
+  useEffect(() => {
+    createClient().from('Sales').select('salesman').not('salesman', 'is', null)
+      .then(({ data: s }) => setSalesmen([...new Set((s ?? []).map(r => r.salesman).filter(Boolean) as string[])].sort()))
+  }, [])
+
+  const columns = useMemo<Column<Sale>[]>(() => [
+    { key: 'phone', header: 'Telefon' },
+    { key: 'salesman', header: 'Handlowiec', filterOptions: salesmen },
+    { key: 'company', header: 'Firma' },
+    { key: 'sale_status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—', filterOptions: STATUS_OPTIONS },
+    { key: 'tracking_number', header: 'Nr śledzenia' },
+    { key: 'machine_id', header: 'ID maszyny', filterable: false },
+    { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
+  ], [salesmen])
 
   // Logistyka ma tylko odczyt
   const canEdit = ['admin', 'handlowiec'].includes(role)
@@ -88,9 +95,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('sale_status', filter)
-    Object.entries(columnFilters).forEach(([key, value]) => {
-      if (value.trim()) query = query.ilike(key, `%${value.trim()}%`)
-    })
+    query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
@@ -131,7 +136,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
       </div>
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
-        columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
+        columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
         onAdd={canEdit ? openAdd : undefined}
@@ -141,6 +146,8 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
+        columnFilters={columnFilters}
+        onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj zamówienie' : 'Nowe zamówienie'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">

@@ -1,20 +1,21 @@
 @import "tailwindcss";
 
 /* Kolory CRM 4DPF — wyłącznie dark mode (hardcoded) */
+/* Baza: ciepłe neutralne szarości (komfort oczu) + pomarańcz 4DPF jako akcent */
 :root {
-  --bg: #0f1117;
-  --sidebar: #161820;
-  --accent: #4f6ef7;
-  --accent-hover: #3d5ce0;
-  --border: #252836;
-  --surface: #1a1d2e;
-  --surface-2: #1e2130;
-  --text: #e5e7eb;
-  --text-muted: #9ca3af;
-  --text-dim: #6b7280;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
+  --bg: #181614;
+  --sidebar: #201d1a;
+  --accent: #e07818;
+  --accent-hover: #c96b10;
+  --border: #2e2a25;
+  --surface: #211e1b;
+  --surface-2: #2a2620;
+  --text: #e2d9ce;
+  --text-muted: #8a7f72;
+  --text-dim: #524a40;
+  --danger: #e8384f;
+  --success: #10a872;
+  --warning: #e8a800;
 }
 
 @theme inline {
@@ -27,9 +28,69 @@ html,
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus state dla wszystkich inputów, selectów i textarea */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(239, 127, 26, 0.15);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input,
+select,
+textarea {
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* ── Animacje modala ────────────────────────────────────────────────── */
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes overlayHide {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes contentShow {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -44%) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes contentHide {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -44%) scale(0.94);
+  }
 }
 
 /* Scrollbar styling */

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,6 +8,7 @@ import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
+import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { SalesDeal, Role } from '@/lib/supabase/types'
 
 const schema = z.object({
@@ -26,19 +27,9 @@ type FormData = z.infer<typeof schema>
 const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'closed']
 const PAGE_SIZE = 25
 
-const COLUMNS: Column<SalesDeal>[] = [
-  { key: 'client_name', header: 'Klient' },
-  { key: 'phone', header: 'Telefon' },
-  { key: 'salesman', header: 'Handlowiec' },
-  { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—' },
-  { key: 'category', header: 'Kategoria' },
-  { key: 'detected_engine', header: 'Silnik' },
-  { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
-]
-
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    open: '#22c55e', pending: '#f59e0b', in_progress: '#4f6ef7', closed: '#6b7280',
+    open: '#22c55e', pending: '#f59e0b', in_progress: '#ef7f1a', closed: '#6b7280',
   }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
@@ -73,8 +64,9 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [filter, setFilter] = useState('all')
+  const [filterOptionsMap, setFilterOptionsMap] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<SalesDeal | null>(null)
@@ -84,6 +76,33 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
+
+  useEffect(() => {
+    async function loadOptions() {
+      const supabase = createClient()
+      const [{ data: s }, { data: c }, { data: e }] = await Promise.all([
+        supabase.from('Sales Deals').select('salesman').not('salesman', 'is', null),
+        supabase.from('Sales Deals').select('category').not('category', 'is', null),
+        supabase.from('Sales Deals').select('detected_engine').not('detected_engine', 'is', null),
+      ])
+      setFilterOptionsMap({
+        salesman: [...new Set((s ?? []).map(r => r.salesman).filter(Boolean) as string[])].sort(),
+        category: [...new Set((c ?? []).map(r => r.category).filter(Boolean) as string[])].sort(),
+        detected_engine: [...new Set((e ?? []).map(r => r.detected_engine).filter(Boolean) as string[])].sort(),
+      })
+    }
+    loadOptions()
+  }, [])
+
+  const columns = useMemo<Column<SalesDeal>[]>(() => [
+    { key: 'client_name', header: 'Klient' },
+    { key: 'phone', header: 'Telefon' },
+    { key: 'salesman', header: 'Handlowiec', filterOptions: filterOptionsMap.salesman },
+    { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—', filterOptions: STATUS_OPTIONS },
+    { key: 'category', header: 'Kategoria', filterOptions: filterOptionsMap.category },
+    { key: 'detected_engine', header: 'Silnik', filterOptions: filterOptionsMap.detected_engine },
+    { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
+  ], [filterOptionsMap])
 
   const canEdit = ['admin', 'handlowiec'].includes(role)
   const canDelete = role === 'admin'
@@ -95,9 +114,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales Deals').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
-    Object.entries(columnFilters).forEach(([key, value]) => {
-      if (value.trim()) query = query.ilike(key, `%${value.trim()}%`)
-    })
+    query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? [])
@@ -145,7 +162,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
 
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
-        columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
+        columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count}
         page={page}
         onPageChange={setPage}
@@ -163,6 +180,8 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
+        columnFilters={columnFilters}
+        onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj transakcję' : 'Nowa transakcja'} size="lg">

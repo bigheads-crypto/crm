@@ -1,8 +1,10 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Filter, ArrowUp, ArrowDown, X } from 'lucide-react'
 import { Pagination } from './Pagination'
+import type { ColumnFilters, ColumnFilter, FilterCondition } from '@/lib/supabase/filters'
 
 export interface Column<T> {
   key: keyof T | string
@@ -11,6 +13,7 @@ export interface Column<T> {
   width?: string
   sortable?: boolean
   filterable?: boolean
+  filterOptions?: string[]
 }
 
 export interface DataTableProps<T> {
@@ -34,12 +37,23 @@ export interface DataTableProps<T> {
   sortKey?: string
   sortDir?: 'asc' | 'desc'
   onSortChange?: (key: string, dir: 'asc' | 'desc') => void
-  columnFilters?: Record<string, string>
-  onColumnFiltersChange?: (filters: Record<string, string>) => void
-  // legacy — kept for backward compat but not rendered
+  columnFilters?: ColumnFilters
+  onColumnFiltersChange?: (filters: ColumnFilters) => void
+  // legacy — kept for backward compat
   searchValue?: string
   onSearchChange?: (val: string) => void
 }
+
+const CONDITIONS: { value: FilterCondition; label: string; needsValue: boolean }[] = [
+  { value: 'contains',      label: 'Zawiera',           needsValue: true  },
+  { value: 'not_contains',  label: 'Nie zawiera',       needsValue: true  },
+  { value: 'equals',        label: 'Równa się',         needsValue: true  },
+  { value: 'not_equals',    label: 'Nie równa się',     needsValue: true  },
+  { value: 'starts_with',   label: 'Zaczyna się od',    needsValue: true  },
+  { value: 'ends_with',     label: 'Kończy się na',     needsValue: true  },
+  { value: 'is_empty',      label: 'Jest puste',        needsValue: false },
+  { value: 'is_not_empty',  label: 'Nie jest puste',    needsValue: false },
+]
 
 export function DataTable<T extends Record<string, unknown>>({
   data,
@@ -67,36 +81,87 @@ export function DataTable<T extends Record<string, unknown>>({
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(totalCount / pageSize)
   const showActions = (canEdit && onEdit) || (canDelete && onDelete)
+  const activeFilterCount = Object.keys(externalFilters ?? {}).length
 
+  // Column resize
   const [colWidths, setColWidths] = useState<Record<string, number>>({})
-  const [localFilters, setLocalFilters] = useState<Record<string, string>>(externalFilters ?? {})
   const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null)
   const thRefs = useRef<Record<string, HTMLTableCellElement | null>>({})
 
-  // Debounce filter changes → emit to parent after 400ms
+  // Dropdown state
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
+  const [draftFilter, setDraftFilter] = useState<ColumnFilter>({ condition: 'contains', value: '' })
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Sync draft when dropdown opens
   useEffect(() => {
+    if (openDropdown) {
+      const existing = (externalFilters ?? {})[openDropdown]
+      const colDef = columns.find(c => String(c.key) === openDropdown)
+      if (colDef?.filterOptions?.length) {
+        setDraftFilter(existing ?? { condition: 'one_of', value: '', values: [] })
+      } else {
+        setDraftFilter(existing ?? { condition: 'contains', value: '' })
+      }
+    }
+  }, [openDropdown]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Click outside to close
+  useEffect(() => {
+    if (!openDropdown) return
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [openDropdown])
+
+  function openColDropdown(colKey: string, btn: HTMLElement) {
+    if (openDropdown === colKey) { setOpenDropdown(null); return }
+    const rect = btn.getBoundingClientRect()
+    const dropdownWidth = 272
+    const left = rect.left + dropdownWidth > window.innerWidth - 12
+      ? rect.right - dropdownWidth
+      : rect.left
+    setDropdownPos({ top: rect.bottom + 6, left })
+    setOpenDropdown(colKey)
+  }
+
+  function applyDraftFilter() {
+    if (!openDropdown || !onColumnFiltersChange) return
+    const newFilters = { ...(externalFilters ?? {}) }
+    if (draftFilter.condition === 'one_of') {
+      if (draftFilter.values && draftFilter.values.length > 0) {
+        newFilters[openDropdown] = { condition: 'one_of', value: '', values: draftFilter.values }
+      } else {
+        delete newFilters[openDropdown]
+      }
+    } else {
+      const cond = CONDITIONS.find(c => c.value === draftFilter.condition)
+      if (!cond?.needsValue || draftFilter.value.trim()) {
+        newFilters[openDropdown] = { condition: draftFilter.condition, value: draftFilter.value.trim() }
+      } else {
+        delete newFilters[openDropdown]
+      }
+    }
+    onColumnFiltersChange(newFilters)
+    setOpenDropdown(null)
+  }
+
+  function clearColFilter(colKey: string) {
     if (!onColumnFiltersChange) return
-    const timer = setTimeout(() => onColumnFiltersChange(localFilters), 400)
-    return () => clearTimeout(timer)
-  }, [localFilters]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function handleFilterChange(key: string, value: string) {
-    setLocalFilters(prev => ({ ...prev, [key]: value }))
+    const newFilters = { ...(externalFilters ?? {}) }
+    delete newFilters[colKey]
+    onColumnFiltersChange(newFilters)
+    setOpenDropdown(null)
   }
 
-  function clearFilter(key: string) {
-    setLocalFilters(prev => { const n = { ...prev }; delete n[key]; return n })
-  }
-
-  function clearAllFilters() {
-    setLocalFilters({})
-  }
-
-  const activeFilterCount = Object.values(localFilters).filter(Boolean).length
-
-  function handleSort(key: string) {
-    if (!onSortChange) return
-    onSortChange(key, sortKey === key && sortDir === 'asc' ? 'desc' : 'asc')
+  function handleSort(key: string, dir: 'asc' | 'desc') {
+    onSortChange?.(key, dir)
+    setOpenDropdown(null)
   }
 
   function startResize(e: React.MouseEvent, colKey: string) {
@@ -105,7 +170,6 @@ export function DataTable<T extends Record<string, unknown>>({
     if (!th) return
     const startWidth = th.offsetWidth
     resizingRef.current = { key: colKey, startX: e.clientX, startWidth }
-
     const onMove = (ev: MouseEvent) => {
       if (!resizingRef.current) return
       const newWidth = Math.max(60, resizingRef.current.startWidth + ev.clientX - resizingRef.current.startX)
@@ -120,11 +184,12 @@ export function DataTable<T extends Record<string, unknown>>({
     window.addEventListener('mouseup', onUp)
   }
 
-  function SortIcon({ colKey }: { colKey: string }) {
-    if (sortKey !== colKey) return <ChevronsUpDown size={11} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
-    if (sortDir === 'asc') return <ChevronUp size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-    return <ChevronDown size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-  }
+  const openColDef = columns.find(c => String(c.key) === openDropdown)
+  const openColFilterable = openColDef?.filterable !== false
+  const needsValue = CONDITIONS.find(c => c.value === draftFilter.condition)?.needsValue ?? true
+  const hasActiveFilter = !!(externalFilters ?? {})[openDropdown ?? '']
+
+  const [hoveredRow, setHoveredRow] = useState<string | number | null>(null)
 
   return (
     <div className="flex flex-col gap-4">
@@ -133,8 +198,8 @@ export function DataTable<T extends Record<string, unknown>>({
         <div className="flex items-center gap-2">
           {activeFilterCount > 0 && (
             <button
-              onClick={clearAllFilters}
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium"
+              onClick={() => onColumnFiltersChange?.({})}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
               style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}
             >
               <X size={11} /> Wyczyść filtry ({activeFilterCount})
@@ -185,31 +250,88 @@ export function DataTable<T extends Record<string, unknown>>({
           </colgroup>
 
           <thead>
-            {/* Sort row */}
-            <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+            <tr style={{ backgroundColor: 'var(--surface-2)', borderBottom: '2px solid var(--border)' }}>
               {columns.map((col) => {
                 const colKey = String(col.key)
                 const isSortable = col.sortable !== false && !!onSortChange
+                const isFilterable = col.filterable !== false && !!onColumnFiltersChange
+                const hasFilter = !!(externalFilters ?? {})[colKey]
+                const isSortedHere = sortKey === colKey
+                const isOpen = openDropdown === colKey
+
                 return (
                   <th
                     key={colKey}
                     ref={el => { thRefs.current[colKey] = el }}
-                    className="px-4 py-3 text-left font-medium"
+                    className="px-3 py-2.5 text-left"
                     style={{
-                      color: sortKey === colKey ? 'var(--accent)' : 'var(--text-muted)',
+                      color: isSortedHere ? 'var(--accent)' : 'var(--text-muted)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
                       position: 'relative',
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
                       userSelect: 'none',
                     }}
                   >
-                    {isSortable ? (
-                      <button onClick={() => handleSort(colKey)} className="flex items-center gap-1">
-                        {col.header} <SortIcon colKey={colKey} />
-                      </button>
-                    ) : (
-                      col.header
+                    <div className="flex items-center gap-1 min-w-0">
+                      {/* Header text + inline sort icon */}
+                      {isSortable ? (
+                        <button
+                          onClick={() => handleSort(colKey, isSortedHere && sortDir === 'asc' ? 'desc' : 'asc')}
+                          className="flex items-center gap-1 flex-1 text-left min-w-0"
+                          style={{ overflow: 'hidden' }}
+                        >
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'inherit' }}>
+                            {col.header}
+                          </span>
+                          {isSortedHere
+                            ? sortDir === 'asc'
+                              ? <ChevronUp size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                              : <ChevronDown size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                            : <ChevronsUpDown size={11} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
+                          }
+                        </button>
+                      ) : (
+                        <span
+                          className="flex-1"
+                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {col.header}
+                        </span>
+                      )}
+
+                      {/* Filter icon — shown when filterable */}
+                      {isFilterable && (
+                        <button
+                          onClick={e => openColDropdown(colKey, e.currentTarget)}
+                          title="Filtruj / Sortuj"
+                          className="flex items-center justify-center rounded"
+                          style={{
+                            flexShrink: 0,
+                            width: 18,
+                            height: 18,
+                            color: hasFilter || isOpen ? 'var(--accent)' : 'var(--text-dim)',
+                            backgroundColor: isOpen ? 'rgba(239,127,26,0.12)' : 'transparent',
+                            transition: 'color 0.15s, background-color 0.15s',
+                          }}
+                        >
+                          <Filter size={10} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Active filter indicator — colored bottom border */}
+                    {hasFilter && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 0, left: 0, right: 0,
+                        height: 2,
+                        backgroundColor: 'var(--accent)',
+                        borderRadius: '1px 1px 0 0',
+                      }} />
                     )}
+
                     {/* Resize handle */}
                     <div
                       onMouseDown={e => startResize(e, colKey)}
@@ -226,56 +348,9 @@ export function DataTable<T extends Record<string, unknown>>({
                 )
               })}
               {showActions && (
-                <th className="px-4 py-3 text-right font-medium" style={{ color: 'var(--text-muted)' }}>Akcje</th>
+                <th className="px-4 py-2.5 text-right" style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Akcje</th>
               )}
             </tr>
-
-            {/* Filter row */}
-            {onColumnFiltersChange && (
-              <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '2px solid var(--border)' }}>
-                {columns.map((col) => {
-                  const colKey = String(col.key)
-                  const isFilterable = col.filterable !== false
-                  const hasValue = !!localFilters[colKey]
-                  return (
-                    <td key={colKey} style={{ padding: '4px 6px' }}>
-                      {isFilterable ? (
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            value={localFilters[colKey] || ''}
-                            onChange={e => handleFilterChange(colKey, e.target.value)}
-                            placeholder="Filtruj..."
-                            style={{
-                              width: '100%',
-                              fontSize: '11px',
-                              padding: hasValue ? '3px 22px 3px 6px' : '3px 6px',
-                              borderRadius: '4px',
-                              border: hasValue ? '1px solid var(--accent)' : '1px solid var(--border)',
-                              backgroundColor: hasValue ? 'rgba(79,110,247,0.08)' : 'var(--bg)',
-                              color: 'var(--text)',
-                              outline: 'none',
-                              boxSizing: 'border-box',
-                            }}
-                          />
-                          {hasValue && (
-                            <button
-                              onClick={() => clearFilter(colKey)}
-                              style={{
-                                position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
-                                color: 'var(--text-muted)', lineHeight: 1,
-                              }}
-                            >
-                              <X size={10} />
-                            </button>
-                          )}
-                        </div>
-                      ) : null}
-                    </td>
-                  )
-                })}
-                {showActions && <td />}
-              </tr>
-            )}
           </thead>
 
           <tbody>
@@ -307,12 +382,20 @@ export function DataTable<T extends Record<string, unknown>>({
             ) : (
               data.map((row, rowIdx) => {
                 const key = keyExtractor ? keyExtractor(row) : (row.id as string | number) ?? rowIdx
+                const isHovered = hoveredRow === key
                 return (
                   <tr
                     key={key}
+                    onMouseEnter={() => setHoveredRow(key)}
+                    onMouseLeave={() => setHoveredRow(null)}
                     style={{
                       borderBottom: '1px solid var(--border)',
-                      backgroundColor: rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                      backgroundColor: isHovered
+                        ? 'rgba(239,127,26,0.07)'
+                        : rowIdx % 2 === 0
+                        ? 'transparent'
+                        : 'rgba(255,255,255,0.03)',
+                      transition: 'background-color 0.1s',
                     }}
                   >
                     {columns.map((col) => {
@@ -374,6 +457,207 @@ export function DataTable<T extends Record<string, unknown>>({
         </p>
         <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
       </div>
+
+      {/* Column dropdown — rendered in portal to avoid overflow clipping */}
+      {openDropdown && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: 272,
+            zIndex: 9999,
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Sort section */}
+          {onSortChange && (
+            <div style={{ padding: '12px 14px', borderBottom: openColFilterable && onColumnFiltersChange ? '1px solid var(--border)' : 'none' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Sortuj
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSort(openDropdown, 'asc')}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium"
+                  style={{
+                    backgroundColor: sortKey === openDropdown && sortDir === 'asc' ? 'rgba(239,127,26,0.15)' : 'var(--bg)',
+                    color: sortKey === openDropdown && sortDir === 'asc' ? 'var(--accent)' : 'var(--text-muted)',
+                    border: `1px solid ${sortKey === openDropdown && sortDir === 'asc' ? 'rgba(239,127,26,0.5)' : 'var(--border)'}`,
+                  }}
+                >
+                  <ArrowUp size={12} /> A → Z
+                </button>
+                <button
+                  onClick={() => handleSort(openDropdown, 'desc')}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium"
+                  style={{
+                    backgroundColor: sortKey === openDropdown && sortDir === 'desc' ? 'rgba(239,127,26,0.15)' : 'var(--bg)',
+                    color: sortKey === openDropdown && sortDir === 'desc' ? 'var(--accent)' : 'var(--text-muted)',
+                    border: `1px solid ${sortKey === openDropdown && sortDir === 'desc' ? 'rgba(239,127,26,0.5)' : 'var(--border)'}`,
+                  }}
+                >
+                  <ArrowDown size={12} /> Z → A
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Filter section */}
+          {onColumnFiltersChange && openColFilterable && (
+            <div style={{ padding: '12px 14px' }}>
+              {openColDef?.filterOptions?.length ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                      Wybierz wartości
+                    </p>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={() => setDraftFilter(prev => ({ ...prev, condition: 'one_of', values: openColDef!.filterOptions! }))}
+                        style={{ fontSize: 10, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                      >
+                        Zaznacz wszystkie
+                      </button>
+                      <button
+                        onClick={() => setDraftFilter(prev => ({ ...prev, condition: 'one_of', values: [] }))}
+                        style={{ fontSize: 10, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        Odznacz
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
+                    {openColDef.filterOptions.map((opt, idx) => {
+                      const checked = (draftFilter.values ?? []).includes(opt)
+                      return (
+                        <label
+                          key={opt}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '5px 8px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            color: 'var(--text)',
+                            backgroundColor: checked ? 'rgba(239,127,26,0.1)' : 'transparent',
+                            border: `1px solid ${checked ? 'rgba(239,127,26,0.35)' : 'transparent'}`,
+                            transition: 'background-color 0.12s, border-color 0.12s',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            autoFocus={idx === 0}
+                            checked={checked}
+                            onChange={e => {
+                              const vals = draftFilter.values ?? []
+                              setDraftFilter(prev => ({
+                                ...prev,
+                                condition: 'one_of',
+                                values: e.target.checked ? [...vals, opt] : vals.filter(v => v !== opt),
+                              }))
+                            }}
+                            style={{ accentColor: 'var(--accent)', width: 13, height: 13, flexShrink: 0 }}
+                          />
+                          {opt}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                    Filtruj wg warunku
+                  </p>
+                  <select
+                    value={draftFilter.condition}
+                    onChange={e => setDraftFilter(prev => ({ ...prev, condition: e.target.value as FilterCondition }))}
+                    style={{
+                      width: '100%',
+                      marginBottom: needsValue ? 8 : 0,
+                      padding: '7px 10px',
+                      fontSize: 12,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg)',
+                      color: 'var(--text)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {CONDITIONS.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+
+                  {needsValue && (
+                    <input
+                      autoFocus
+                      value={draftFilter.value}
+                      onChange={e => setDraftFilter(prev => ({ ...prev, value: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') applyDraftFilter() }}
+                      placeholder="Wpisz wartość..."
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--bg)',
+                        color: 'var(--text)',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Dropdown footer buttons */}
+          <div
+            className="flex items-center gap-2"
+            style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', backgroundColor: 'rgba(0,0,0,0.06)' }}
+          >
+            {hasActiveFilter && (
+              <button
+                onClick={() => clearColFilter(openDropdown)}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
+              >
+                Wyczyść filtr
+              </button>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={() => setOpenDropdown(null)}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium"
+              style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            >
+              Anuluj
+            </button>
+            {onColumnFiltersChange && openColFilterable && (
+              <button
+                onClick={applyDraftFilter}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium"
+                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+              >
+                Zastosuj
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

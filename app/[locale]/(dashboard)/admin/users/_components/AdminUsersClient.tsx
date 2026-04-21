@@ -30,7 +30,7 @@ interface UserRow {
 }
 
 function RoleBadge({ role }: { role: Role }) {
-  const colors: Record<Role, string> = { admin: '#ef4444', manager: '#a855f7', handlowiec: '#4f6ef7', support: '#f59e0b', hr: '#22c55e', logistyka: '#6b7280' }
+  const colors: Record<Role, string> = { admin: '#ef4444', manager: '#a855f7', handlowiec: '#ef7f1a', support: '#f59e0b', hr: '#22c55e', logistyka: '#6b7280' }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
       style={{ backgroundColor: `${colors[role]}1a`, color: colors[role] }}>

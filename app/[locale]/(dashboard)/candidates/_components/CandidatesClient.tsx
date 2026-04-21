@@ -8,6 +8,7 @@ import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
+import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { OLXCandidate, Role } from '@/lib/supabase/types'
 
 const schema = z.object({
@@ -28,8 +29,8 @@ const PAGE_SIZE = 25
 
 function ScoreBadge({ value }: { value: number | null }) {
   if (value == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>
-  const color = value >= 7 ? '#22c55e' : value >= 4 ? '#f59e0b' : '#ef4444'
-  return <span className="font-semibold" style={{ color }}>{value}/10</span>
+  const color = value >= 70 ? '#22c55e' : value >= 40 ? '#f59e0b' : '#ef4444'
+  return <span className="font-semibold" style={{ color }}>{value}/100</span>
 }
 
 const COLUMNS: Column<OLXCandidate>[] = [
@@ -64,13 +65,13 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<OLXCandidate | null>(null)
   const [deleteRow, setDeleteRow] = useState<OLXCandidate | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
-  const [sortKey, setSortKey] = useState('created_at')
+  const [sortKey, setSortKey] = useState('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
@@ -84,10 +85,11 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
     setLoading(true)
     const supabase = createClient()
     let query = supabase.from('OLX').select('*', { count: 'exact' })
+    query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, sortKey, sortDir])
+  }, [page, columnFilters, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -137,6 +139,8 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
+        columnFilters={columnFilters}
+        onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj kandydata' : 'Nowy kandydat'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">

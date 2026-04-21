@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,6 +8,7 @@ import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
+import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { SupportCase, Role } from '@/lib/supabase/types'
 
 const schema = z.object({
@@ -26,18 +27,8 @@ type FormData = z.infer<typeof schema>
 const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'resolved', 'closed']
 const PAGE_SIZE = 25
 
-const COLUMNS: Column<SupportCase>[] = [
-  { key: 'clients_name', header: 'Klient' },
-  { key: 'phone', header: 'Telefon' },
-  { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—' },
-  { key: 'last_agent', header: 'Agent' },
-  { key: 'current_category', header: 'Kategoria' },
-  { key: 'detected_engine', header: 'Silnik' },
-  { key: 'last_contact_at', header: 'Ostatni kontakt', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
-]
-
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = { open: '#ef4444', pending: '#f59e0b', in_progress: '#4f6ef7', resolved: '#22c55e', closed: '#6b7280' }
+  const colors: Record<string, string> = { open: '#ef4444', pending: '#f59e0b', in_progress: '#ef7f1a', resolved: '#22c55e', closed: '#6b7280' }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
       style={{ backgroundColor: `${colors[status] ?? '#6b7280'}1a`, color: colors[status] ?? '#6b7280' }}>
@@ -64,7 +55,7 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -73,8 +64,36 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [sortKey, setSortKey] = useState('last_contact_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [filterOptionsMap, setFilterOptionsMap] = useState<Record<string, string[]>>({})
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
+
+  useEffect(() => {
+    async function loadOptions() {
+      const supabase = createClient()
+      const [{ data: a }, { data: c }, { data: e }] = await Promise.all([
+        supabase.from('Support Case').select('last_agent').not('last_agent', 'is', null),
+        supabase.from('Support Case').select('current_category').not('current_category', 'is', null),
+        supabase.from('Support Case').select('detected_engine').not('detected_engine', 'is', null),
+      ])
+      setFilterOptionsMap({
+        last_agent: [...new Set((a ?? []).map(r => r.last_agent).filter(Boolean) as string[])].sort(),
+        current_category: [...new Set((c ?? []).map(r => r.current_category).filter(Boolean) as string[])].sort(),
+        detected_engine: [...new Set((e ?? []).map(r => r.detected_engine).filter(Boolean) as string[])].sort(),
+      })
+    }
+    loadOptions()
+  }, [])
+
+  const columns = useMemo<Column<SupportCase>[]>(() => [
+    { key: 'clients_name', header: 'Klient' },
+    { key: 'phone', header: 'Telefon' },
+    { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—', filterOptions: STATUS_OPTIONS },
+    { key: 'last_agent', header: 'Agent', filterOptions: filterOptionsMap.last_agent },
+    { key: 'current_category', header: 'Kategoria', filterOptions: filterOptionsMap.current_category },
+    { key: 'detected_engine', header: 'Silnik', filterOptions: filterOptionsMap.detected_engine },
+    { key: 'last_contact_at', header: 'Ostatni kontakt', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
+  ], [filterOptionsMap])
 
   const canEdit = ['admin', 'support'].includes(role)
   const canDelete = role === 'admin'
@@ -86,10 +105,11 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Support Case').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('status', filter)
+    query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, filter, sortKey, sortDir])
+  }, [page, columnFilters, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -123,7 +143,7 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
       </div>
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
-        columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
+        columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
         onAdd={canEdit ? openAdd : undefined}
@@ -133,6 +153,8 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
+        columnFilters={columnFilters}
+        onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj sprawę' : 'Nowa sprawa'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">

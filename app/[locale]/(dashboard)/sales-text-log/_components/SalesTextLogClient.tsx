@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { createClient } from '@/lib/supabase/client'
+import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { SalesTextLog, Role } from '@/lib/supabase/types'
 
 const PAGE_SIZE = 25
@@ -20,7 +21,7 @@ function DirectionBadge({ dir }: { dir: string }) {
   const isIn = dir === 'inbound' || dir === 'in'
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: isIn ? 'rgba(34,197,94,0.15)' : 'rgba(79,110,247,0.15)', color: isIn ? '#22c55e' : '#4f6ef7' }}>
+      style={{ backgroundColor: isIn ? 'rgba(34,197,94,0.15)' : 'rgba(239,127,26,0.15)', color: isIn ? '#22c55e' : '#ef7f1a' }}>
       {isIn ? '↓ IN' : '↑ OUT'}
     </span>
   )
@@ -32,7 +33,7 @@ export function SalesTextLogClient({ initialData, initialCount, role }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -46,10 +47,11 @@ export function SalesTextLogClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('Sales Text Log').select('*', { count: 'exact' })
     if (filter !== 'all') query = query.eq('direction', filter)
+    query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
-  }, [page, filter, sortKey, sortDir])
+  }, [page, columnFilters, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -87,6 +89,8 @@ export function SalesTextLogClient({ initialData, initialCount, role }: Props) {
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
+        columnFilters={columnFilters}
+        onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
       {/* Panel rozwiniętej wiadomości */}
       {expandedId && (() => {

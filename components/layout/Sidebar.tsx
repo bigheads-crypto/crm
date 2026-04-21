@@ -128,22 +128,32 @@ export function Sidebar({ role, locale }: SidebarProps) {
         width: collapsed ? '64px' : '240px',
         backgroundColor: 'var(--sidebar)',
         borderRight: '1px solid var(--border)',
+        boxShadow: '2px 0 12px rgba(0,0,0,0.3)',
       }}
     >
       {/* Logo / nagłówek */}
       <div
-        className="flex items-center h-14 px-4 flex-shrink-0"
+        className="flex items-center justify-center h-14 px-4 flex-shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         {!collapsed && (
-          <span className="text-base font-bold truncate" style={{ color: 'var(--accent)' }}>
-            4DPF CRM
-          </span>
+          <div
+            className="flex flex-col items-center justify-center w-full py-1"
+            style={{
+              border: '1.5px solid var(--accent)',
+              borderRadius: '6px',
+            }}
+          >
+            <span className="text-sm font-bold leading-tight" style={{ color: 'var(--text)' }}>
+              4DPF
+            </span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+              CRM System
+            </span>
+          </div>
         )}
         {collapsed && (
-          <span className="text-base font-bold mx-auto" style={{ color: 'var(--accent)' }}>
-            4D
-          </span>
+          <span className="text-sm font-bold" style={{ color: 'var(--accent)' }}>4D</span>
         )}
       </div>
 
@@ -159,7 +169,7 @@ export function Sidebar({ role, locale }: SidebarProps) {
               href={`/${locale}${item.href}`}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 mb-0.5 transition-colors text-sm font-medium"
               style={{
-                backgroundColor: active ? 'rgba(79, 110, 247, 0.15)' : 'transparent',
+                backgroundColor: active ? 'rgba(239, 127, 26, 0.12)' : 'transparent',
                 color: active ? 'var(--accent)' : 'var(--text-muted)',
                 borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
               }}
