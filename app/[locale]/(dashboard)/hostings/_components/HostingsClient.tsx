@@ -40,17 +40,16 @@ function DueDateBadge({ value }: { value: string | null }) {
   )
 }
 
-function DaysLeftBadge({ value }: { value: string | null }) {
-  if (!value) return <span style={{ color: 'var(--text-dim)' }}>—</span>
-  const diff = getDiffDays(value)
-  const expired = diff < 0
-  const soon = diff >= 0 && diff < 30
+function DaysLeftBadge({ days }: { days: number | null }) {
+  if (days == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>
+  const expired = days < 0
+  const soon = days >= 0 && days < 30
   const color = expired ? '#e8384f' : soon ? '#e8a800' : '#10a872'
   const label = expired
-    ? `${Math.abs(diff)} dni temu`
-    : diff === 0
+    ? `${Math.abs(days)} dni temu`
+    : days === 0
     ? 'Dziś!'
-    : `${diff} dni`
+    : `${days} dni`
   return (
     <span style={{
       display: 'inline-flex',
@@ -131,9 +130,9 @@ export function HostingsClient({ initialData, initialCount, role }: Props) {
       render: (v) => <DueDateBadge value={v as string | null} />,
     },
     {
-      key: 'due_date',
+      key: 'days_left',
       header: 'Pozostało',
-      render: (v) => <DaysLeftBadge value={v as string | null} />,
+      render: (v) => <DaysLeftBadge days={v as number | null} />,
     },
     {
       key: 'created_at',
@@ -202,7 +201,7 @@ export function HostingsClient({ initialData, initialCount, role }: Props) {
         </p>
       </div>
       <DataTable
-        data={data as unknown as Record<string, unknown>[]}
+        data={data.map(r => ({ ...r, days_left: r.due_date ? getDiffDays(r.due_date) : null })) as unknown as Record<string, unknown>[]}
         columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count}
         page={page}
