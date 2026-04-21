@@ -5,7 +5,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { LogOut, ChevronDown } from 'lucide-react'
+import { LogOut, ChevronDown, UserCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 // Mapowanie fragmentu URL na klucz tłumaczenia tytułu
@@ -21,6 +21,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   candidates: 'Kandydaci',
   machines: 'Maszyny',
   users: 'Użytkownicy',
+  settings: 'Profil użytkownika',
 }
 
 interface NavbarProps {
@@ -127,6 +128,16 @@ export function Navbar({ userEmail, locale }: NavbarProps) {
                   {userEmail}
                 </p>
               </div>
+
+              {/* Profil użytkownika */}
+              <DropdownMenu.Item
+                onSelect={() => router.push(`/${locale}/settings`)}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer outline-none transition-colors"
+                style={{ color: 'var(--text)' }}
+              >
+                <UserCircle size={13} />
+                Profil użytkownika
+              </DropdownMenu.Item>
 
               {/* Wyloguj */}
               <DropdownMenu.Item

@@ -133,6 +133,8 @@ const columns = useMemo<Column<T>[]>(() => [
 ## Znane pułapki
 - Tabela `OLX` (`OLXCandidate`) **nie ma kolumny `created_at`** — domyślny `sortKey` musi być `'id'`, nie `'created_at'`
 - Pozostałe tabele mają `created_at` i mogą używać go jako domyślnego sortowania
+- **Kolumny wyliczane (np. `days_left`)** nie istnieją w bazie — przy sortowaniu trzeba mapować je na realną kolumnę DB przed wysłaniem do Supabase (np. `days_left` → `due_date`). Wzorzec: `const dbSortKey = sortKey === 'days_left' ? 'due_date' : sortKey`
+- **Hydration mismatch z `new Date()`** — komponenty renderujące wartości zależne od aktualnego czasu (różnica dni, sformatowana data) muszą mieć `suppressHydrationWarning` na elemencie ze zmienną treścią. Serwer (UTC) i klient (inna strefa) obliczają różne wartości → React regeneruje drzewo. Dotyczy `DaysLeftBadge` i `DueDateBadge` w `hostings` i `domains`.
 
 ## Design system — v1.7
 
