@@ -34,7 +34,7 @@ function DueDateBadge({ value }: { value: string | null }) {
   const diff = getDiffDays(value)
   const color = diff < 0 ? '#e8384f' : diff < 30 ? '#e8a800' : '#10a872'
   return (
-    <span style={{ color, fontWeight: 500 }}>
+    <span suppressHydrationWarning style={{ color, fontWeight: 500 }}>
       {date.toLocaleDateString('pl-PL')}
     </span>
   )
@@ -51,7 +51,7 @@ function DaysLeftBadge({ days }: { days: number | null }) {
     ? 'Dziś!'
     : `${days} dni`
   return (
-    <span style={{
+    <span suppressHydrationWarning style={{
       display: 'inline-flex',
       alignItems: 'center',
       padding: '2px 9px',
