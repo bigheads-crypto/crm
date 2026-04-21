@@ -10,6 +10,8 @@
     "supportTextLog": "SMS Support",
     "candidates": "Candidates",
     "machines": "Machines",
+    "domains": "Domains",
+    "hostings": "Hostings",
     "adminUsers": "Users"
   },
   "auth": {
@@ -185,6 +187,20 @@
       "harness": "Harness",
       "straightPipe": "Straight pipe",
       "returnStatus": "Return status"
+    },
+    "domains": {
+      "title": "Domains",
+      "domain": "Domain",
+      "provider": "Provider",
+      "dueDate": "Expiry date",
+      "createdAt": "Added"
+    },
+    "hostings": {
+      "title": "Hostings",
+      "description": "Description",
+      "provider": "Provider",
+      "dueDate": "Expiry date",
+      "createdAt": "Added"
     }
   },
   "status": {

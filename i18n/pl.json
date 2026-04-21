@@ -10,6 +10,8 @@
     "supportTextLog": "SMS Support",
     "candidates": "Kandydaci",
     "machines": "Maszyny",
+    "domains": "Domeny",
+    "hostings": "Hostingi",
     "adminUsers": "Użytkownicy"
   },
   "auth": {
@@ -185,6 +187,20 @@
       "harness": "Wiązka",
       "straightPipe": "Rura prosta",
       "returnStatus": "Status zwrotu"
+    },
+    "domains": {
+      "title": "Domeny",
+      "domain": "Domena",
+      "provider": "Dostawca",
+      "dueDate": "Data wygaśnięcia",
+      "createdAt": "Dodano"
+    },
+    "hostings": {
+      "title": "Hostingi",
+      "description": "Opis",
+      "provider": "Dostawca",
+      "dueDate": "Data wygaśnięcia",
+      "createdAt": "Dodano"
     }
   },
   "status": {

@@ -18,6 +18,8 @@ import {
   Users,
   Cpu,
   Settings,
+  Globe,
+  Server,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -93,6 +95,18 @@ const NAV_ITEMS: NavItem[] = [
     href: '/machines',
     icon: Cpu,
     roles: ['admin', 'handlowiec', 'logistyka', 'manager'],
+  },
+  {
+    key: 'domains',
+    href: '/domains',
+    icon: Globe,
+    roles: ['admin', 'manager'],
+  },
+  {
+    key: 'hostings',
+    href: '/hostings',
+    icon: Server,
+    roles: ['admin', 'manager'],
   },
   {
     key: 'adminUsers',

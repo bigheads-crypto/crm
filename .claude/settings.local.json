@@ -9,7 +9,9 @@
       "Bash(sed -i 's/columns={COLUMNS as Column<Record<string, unknown>>\\\\[\\\\]}/columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}/' \"$f\")",
       "Bash(done)",
       "Bash(npm run:*)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Admin\\\\Desktop\\\\SYSTEM\\\\CRM_official\\\\crm\\\\app\\\\[locale]\\\\\\(dashboard\\)\\\\domains\\\\_components\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Admin\\\\Desktop\\\\SYSTEM\\\\CRM_official\\\\crm\\\\app\\\\[locale]\\\\\\(dashboard\\)\\\\hostings\\\\_components\")"
     ]
   }
 }

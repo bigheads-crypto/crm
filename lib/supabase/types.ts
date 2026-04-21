@@ -182,3 +182,27 @@ export interface Sale {
 
 export type SaleInsert = Omit<Sale, 'id' | 'created_at'>
 export type SaleUpdate = Partial<SaleInsert>
+
+// Domeny
+export interface Domain {
+  id: number
+  created_at: string
+  domain: string | null
+  provider: string | null
+  due_date: string | null
+}
+
+export type DomainInsert = Omit<Domain, 'id' | 'created_at'>
+export type DomainUpdate = Partial<DomainInsert>
+
+// Hostingi
+export interface Hosting {
+  id: number
+  created_at: string
+  description: string | null
+  provider: string | null
+  due_date: string | null
+}
+
+export type HostingInsert = Omit<Hosting, 'id' | 'created_at'>
+export type HostingUpdate = Partial<HostingInsert>
