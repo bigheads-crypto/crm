@@ -132,6 +132,7 @@ export function HostingsClient({ initialData, initialCount, role }: Props) {
     {
       key: 'days_left',
       header: 'Pozostało',
+      sortable: true,
       render: (v) => <DaysLeftBadge days={v as number | null} />,
     },
     {
@@ -147,7 +148,8 @@ export function HostingsClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     let query = supabase.from('hostings').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
-    query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    const dbSortKey = sortKey === 'days_left' ? 'due_date' : sortKey
+    query = query.order(dbSortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
     setData(rows ?? [])
     setCount(total ?? 0)
