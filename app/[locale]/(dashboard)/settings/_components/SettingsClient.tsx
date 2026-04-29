@@ -1,8 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { UserCircle, Lock, Mail, User } from 'lucide-react'
+import { UserCircle, Lock, Mail, User, Palette } from 'lucide-react'
+import {
+  THEMES,
+  THEME_STORAGE_KEY,
+  applyTheme,
+  type ThemeKey,
+} from '@/components/shared/ThemeProvider'
 
 interface SettingsClientProps {
   userEmail: string
@@ -16,6 +22,18 @@ export function SettingsClient({ userEmail, fullName, role }: SettingsClientProp
   const [confirmPassword, setConfirmPassword] = useState('')
   const [pwStatus, setPwStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [pwLoading, setPwLoading] = useState(false)
+  const [activeTheme, setActiveTheme] = useState<ThemeKey>('orange')
+
+  useEffect(() => {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeKey | null
+    if (stored) setActiveTheme(stored)
+  }, [])
+
+  const handleThemeChange = (key: ThemeKey) => {
+    setActiveTheme(key)
+    applyTheme(key)
+    localStorage.setItem(THEME_STORAGE_KEY, key)
+  }
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,6 +105,54 @@ export function SettingsClient({ userEmail, fullName, role }: SettingsClientProp
           <InfoRow icon={<User size={14} />} label="Imię i nazwisko" value={fullName || '—'} />
           <InfoRow icon={<UserCircle size={14} />} label="Rola" value={roleLabels[role] || role} />
         </div>
+      </div>
+
+      {/* Karta — motyw kolorystyczny */}
+      <div
+        className="rounded-xl p-6"
+        style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center gap-2 mb-5">
+          <Palette size={15} style={{ color: 'var(--accent)' }} />
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+            Kolor akcentu
+          </h3>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, theme]) => {
+            const isActive = activeTheme === key
+            return (
+              <button
+                key={key}
+                title={theme.label}
+                onClick={() => handleThemeChange(key)}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all"
+                style={{
+                  backgroundColor: isActive ? `${theme.accent}22` : 'var(--surface-2)',
+                  border: isActive
+                    ? `2px solid ${theme.accent}`
+                    : '2px solid var(--border)',
+                  color: isActive ? theme.accent : 'var(--text-muted)',
+                }}
+              >
+                <span
+                  className="inline-block rounded-full flex-shrink-0"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    backgroundColor: theme.accent,
+                    boxShadow: isActive ? `0 0 0 2px ${theme.accentShadow}` : 'none',
+                  }}
+                />
+                {theme.label}
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-3 text-xs" style={{ color: 'var(--text-dim)' }}>
+          Motyw zapisywany lokalnie w przeglądarce.
+        </p>
       </div>
 
       {/* Karta — zmiana hasła */}

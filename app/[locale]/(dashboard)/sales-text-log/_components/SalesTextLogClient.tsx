@@ -21,7 +21,7 @@ function DirectionBadge({ dir }: { dir: string }) {
   const isIn = dir === 'inbound' || dir === 'in'
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: isIn ? 'rgba(34,197,94,0.15)' : 'rgba(239,127,26,0.15)', color: isIn ? '#22c55e' : '#ef7f1a' }}>
+      style={{ backgroundColor: isIn ? 'rgba(34,197,94,0.15)' : 'rgba(239,127,26,0.15)', color: isIn ? '#22c55e' : '#e07818' }}>
       {isIn ? '↓ IN' : '↑ OUT'}
     </span>
   )

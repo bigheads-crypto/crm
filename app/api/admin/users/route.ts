@@ -1,11 +1,8 @@
-// API Route dla zarządzania użytkownikami — tylko admin
-// Używa service_role key po stronie serwera (nigdy nie eksponować klientowi)
-
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
-// Tworzy admin client z service_role key
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -13,7 +10,6 @@ function createAdminClient() {
   return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-// Sprawdza czy żądający użytkownik jest adminem
 async function requireAdmin() {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,7 +19,30 @@ async function requireAdmin() {
   return user
 }
 
-// GET /api/admin/users — lista użytkowników z profilami
+const VALID_ROLES = ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'] as const
+
+const createSchema = z.object({
+  action: z.literal('create'),
+  email: z.string().email('Nieprawidłowy email'),
+  password: z.string().min(6, 'Hasło min. 6 znaków'),
+  role: z.enum(VALID_ROLES).default('handlowiec'),
+  full_name: z.string().max(100).nullable().optional(),
+})
+
+const updateRoleSchema = z.object({
+  action: z.literal('update_role'),
+  userId: z.string().uuid('Nieprawidłowe userId'),
+  role: z.enum(VALID_ROLES),
+  full_name: z.string().max(100).nullable().optional(),
+})
+
+const deleteSchema = z.object({
+  action: z.literal('delete'),
+  userId: z.string().uuid('Nieprawidłowe userId'),
+})
+
+const bodySchema = z.discriminatedUnion('action', [createSchema, updateRoleSchema, deleteSchema])
+
 export async function GET() {
   const admin = await requireAdmin()
   if (!admin) return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 })
@@ -33,11 +52,9 @@ export async function GET() {
     const { data: { users }, error } = await adminClient.auth.admin.listUsers()
     if (error) throw error
 
-    // Pobierz profile
     const supabase = await createServerClient()
     const { data: profiles } = await supabase.from('profiles').select('*')
 
-    // Połącz dane
     const result = users.map((u) => {
       const profile = profiles?.find((p) => p.id === u.id)
       return {
@@ -51,51 +68,66 @@ export async function GET() {
     })
 
     return NextResponse.json({ users: result })
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 })
   }
 }
 
-// POST /api/admin/users — stwórz użytkownika lub zaktualizuj rolę
 export async function POST(request: NextRequest) {
   const admin = await requireAdmin()
   if (!admin) return NextResponse.json({ error: 'Brak uprawnień' }, { status: 403 })
 
+  let body: unknown
   try {
-    const body = await request.json()
-    const { action, userId, email, password, role, full_name } = body
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Nieprawidłowe żądanie' }, { status: 400 })
+  }
 
-    const adminClient = createAdminClient()
-    const supabase = await createServerClient()
+  const parsed = bodySchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+  }
 
-    if (action === 'create') {
-      // Stwórz nowego użytkownika
-      const { data: { user }, error } = await adminClient.auth.admin.createUser({
-        email, password, email_confirm: true,
-      })
-      if (error) throw error
+  const data = parsed.data
+  const adminClient = createAdminClient()
+  const supabase = await createServerClient()
 
-      // Dodaj profil
-      await supabase.from('profiles').insert({ id: user!.id, role: role ?? 'handlowiec', full_name: full_name ?? null })
-      return NextResponse.json({ success: true, userId: user!.id })
+  if (data.action === 'create') {
+    const { data: { user }, error: createError } = await adminClient.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+    })
+    if (createError) return NextResponse.json({ error: 'Nie udało się utworzyć użytkownika' }, { status: 500 })
+
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: user!.id,
+      role: data.role ?? 'handlowiec',
+      full_name: data.full_name ?? null,
+    })
+
+    if (profileError) {
+      // Cofnij: usuń auth user żeby nie zostawać osierocony
+      await adminClient.auth.admin.deleteUser(user!.id)
+      return NextResponse.json({ error: 'Nie udało się utworzyć profilu' }, { status: 500 })
     }
 
-    if (action === 'update_role') {
-      // Zaktualizuj rolę w profilu
-      await supabase.from('profiles').upsert({ id: userId, role, full_name })
-      return NextResponse.json({ success: true })
-    }
+    return NextResponse.json({ success: true, userId: user!.id })
+  }
 
-    if (action === 'delete') {
-      // Usuń użytkownika (kaskadowo usuwa profil)
-      const { error } = await adminClient.auth.admin.deleteUser(userId)
-      if (error) throw error
-      return NextResponse.json({ success: true })
-    }
+  if (data.action === 'update_role') {
+    const { error } = await supabase.from('profiles').upsert({ id: data.userId, role: data.role, full_name: data.full_name ?? null })
+    if (error) return NextResponse.json({ error: 'Nie udało się zaktualizować roli' }, { status: 500 })
+    return NextResponse.json({ success: true })
+  }
 
-    return NextResponse.json({ error: 'Nieznana akcja' }, { status: 400 })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Błąd serwera'
-    return NextResponse.json({ error: message }, { status: 500 })
+  if (data.action === 'delete') {
+    if (data.userId === admin.id) {
+      return NextResponse.json({ error: 'Nie możesz usunąć własnego konta' }, { status: 400 })
+    }
+    const { error } = await adminClient.auth.admin.deleteUser(data.userId)
+    if (error) return NextResponse.json({ error: 'Nie udało się usunąć użytkownika' }, { status: 500 })
+    return NextResponse.json({ success: true })
   }
 }

@@ -71,6 +71,7 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<OLXCandidate | null>(null)
   const [deleteRow, setDeleteRow] = useState<OLXCandidate | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -93,10 +94,10 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: OLXCandidate) => {
     reset({ name: row.name ?? '', position: row.position ?? '', olx_id: row.olx_id?.toString() ?? '', education: row.education?.toString() ?? '', language: row.language?.toString() ?? '', experience: row.experience?.toString() ?? '', grade: row.grade?.toString() ?? '', cv_name: row.cv_name ?? '', cv_url: row.cv_url ?? '', description: row.description ?? '' })
-    setEditRow(row); setModalOpen(true)
+    setEditRow(row); setFormError(null); setModalOpen(true)
   }
 
   const onSubmit = async (values: FormData) => {
@@ -110,15 +111,18 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
       experience: values.experience ? Number(values.experience) : null,
       grade: values.grade ? Number(values.grade) : null,
     }
-    if (editRow) { await supabase.from('OLX').update(payload).eq('id', editRow.id) }
-    else { await supabase.from('OLX').insert(payload) }
+    const { error } = editRow
+      ? await supabase.from('OLX').update(payload).eq('id', editRow.id)
+      : await supabase.from('OLX').insert(payload)
+    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('OLX').delete().eq('id', deleteRow.id)
+    const { error } = await createClient().from('OLX').delete().eq('id', deleteRow.id)
+    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 
@@ -147,13 +151,14 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
           <FormField label="Imię i nazwisko *" error={errors.name?.message}><input {...register('name')} style={inputStyle} /></FormField>
           <FormField label="Stanowisko"><input {...register('position')} style={inputStyle} /></FormField>
           <FormField label="ID OLX"><input {...register('olx_id')} type="number" style={inputStyle} /></FormField>
-          <FormField label="Ocena ogólna (0-10)"><input {...register('grade')} type="number" min="0" max="10" style={inputStyle} /></FormField>
-          <FormField label="Wykształcenie (0-10)"><input {...register('education')} type="number" min="0" max="10" style={inputStyle} /></FormField>
-          <FormField label="Języki (0-10)"><input {...register('language')} type="number" min="0" max="10" style={inputStyle} /></FormField>
-          <FormField label="Doświadczenie (0-10)"><input {...register('experience')} type="number" min="0" max="10" style={inputStyle} /></FormField>
+          <FormField label="Ocena ogólna (0-100)"><input {...register('grade')} type="number" min="0" max="100" style={inputStyle} /></FormField>
+          <FormField label="Wykształcenie (0-100)"><input {...register('education')} type="number" min="0" max="100" style={inputStyle} /></FormField>
+          <FormField label="Języki (0-100)"><input {...register('language')} type="number" min="0" max="100" style={inputStyle} /></FormField>
+          <FormField label="Doświadczenie (0-100)"><input {...register('experience')} type="number" min="0" max="100" style={inputStyle} /></FormField>
           <FormField label="Nazwa pliku CV"><input {...register('cv_name')} style={inputStyle} /></FormField>
           <div className="col-span-2"><FormField label="URL CV"><input {...register('cv_url')} style={inputStyle} placeholder="https://..." /></FormField></div>
           <div className="col-span-2"><FormField label="Opis"><textarea {...register('description')} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} /></FormField></div>
+          {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="col-span-2 flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{isSubmitting ? 'Zapisywanie...' : 'Zapisz'}</button>

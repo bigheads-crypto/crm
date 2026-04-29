@@ -29,7 +29,7 @@ const STATUS_OPTIONS = ['new', 'processing', 'shipped', 'delivered', 'cancelled'
 const PAGE_SIZE = 25
 
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = { new: '#ef7f1a', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444' }
+  const colors: Record<string, string> = { new: '#e07818', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444' }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
       style={{ backgroundColor: `${colors[status] ?? '#6b7280'}1a`, color: colors[status] ?? '#6b7280' }}>
@@ -63,6 +63,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<Sale | null>(null)
   const [deleteRow, setDeleteRow] = useState<Sale | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [salesmen, setSalesmen] = useState<string[]>([])
@@ -103,24 +104,27 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: Sale) => {
     reset({ phone: row.phone ?? '', salesman: row.salesman ?? '', email_address: row.email_address ?? '', sale_status: row.sale_status ?? '', shipping_details: row.shipping_details ?? '', invoice_details: row.invoice_details ?? '', tracking_number: row.tracking_number ?? '', paypal_invoice_number: row.paypal_invoice_number ?? '', company: row.company ?? '', machine_id: row.machine_id?.toString() ?? '' })
-    setEditRow(row); setModalOpen(true)
+    setEditRow(row); setFormError(null); setModalOpen(true)
   }
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
     const payload = { ...values, machine_id: values.machine_id ? Number(values.machine_id) : null }
-    if (editRow) { await supabase.from('Sales').update(payload).eq('id', editRow.id) }
-    else { await supabase.from('Sales').insert(payload) }
+    const { error } = editRow
+      ? await supabase.from('Sales').update(payload).eq('id', editRow.id)
+      : await supabase.from('Sales').insert(payload)
+    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('Sales').delete().eq('id', deleteRow.id)
+    const { error } = await createClient().from('Sales').delete().eq('id', deleteRow.id)
+    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 
@@ -166,6 +170,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
           <FormField label="PayPal Invoice"><input {...register('paypal_invoice_number')} style={inputStyle} /></FormField>
           <div className="col-span-2"><FormField label="Adres wysyłki"><textarea {...register('shipping_details')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField></div>
           <div className="col-span-2"><FormField label="Dane faktury"><textarea {...register('invoice_details')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField></div>
+          {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="col-span-2 flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{isSubmitting ? 'Zapisywanie...' : 'Zapisz'}</button>

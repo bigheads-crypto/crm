@@ -29,7 +29,7 @@ const PAGE_SIZE = 25
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    open: '#22c55e', pending: '#f59e0b', in_progress: '#ef7f1a', closed: '#6b7280',
+    open: '#22c55e', pending: '#f59e0b', in_progress: '#e07818', closed: '#6b7280',
   }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
@@ -72,6 +72,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<SalesDeal | null>(null)
   const [deleteRow, setDeleteRow] = useState<SalesDeal | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -124,16 +125,15 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setModalOpen(true) }
-  const openEdit = (row: SalesDeal) => { reset({ phone: row.phone ?? '', client_name: row.client_name ?? '', salesman: row.salesman ?? '', status: row.status ?? '', category: row.category ?? '', email: row.email ?? '', detected_engine: row.detected_engine ?? '', current_summary: row.current_summary ?? '', shipping_details: row.shipping_details ?? '' }); setEditRow(row); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
+  const openEdit = (row: SalesDeal) => { reset({ phone: row.phone ?? '', client_name: row.client_name ?? '', salesman: row.salesman ?? '', status: row.status ?? '', category: row.category ?? '', email: row.email ?? '', detected_engine: row.detected_engine ?? '', current_summary: row.current_summary ?? '', shipping_details: row.shipping_details ?? '' }); setEditRow(row); setFormError(null); setModalOpen(true) }
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
-    if (editRow) {
-      await supabase.from('Sales Deals').update(values).eq('id', editRow.id)
-    } else {
-      await supabase.from('Sales Deals').insert(values)
-    }
+    const { error } = editRow
+      ? await supabase.from('Sales Deals').update(values).eq('id', editRow.id)
+      : await supabase.from('Sales Deals').insert(values)
+    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
     setModalOpen(false)
     fetchData()
   }
@@ -142,7 +142,8 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     if (!deleteRow) return
     setDeleteLoading(true)
     const supabase = createClient()
-    await supabase.from('Sales Deals').delete().eq('id', deleteRow.id)
+    const { error } = await supabase.from('Sales Deals').delete().eq('id', deleteRow.id)
+    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
     setDeleteRow(null)
     setDeleteLoading(false)
     fetchData()
@@ -218,6 +219,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
               <textarea {...register('current_summary')} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} />
             </FormField>
           </div>
+          {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="col-span-2 flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>

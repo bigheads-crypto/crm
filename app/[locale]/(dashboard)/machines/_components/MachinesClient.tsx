@@ -74,6 +74,7 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<Machine | null>(null)
   const [deleteRow, setDeleteRow] = useState<Machine | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -97,24 +98,27 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: Machine) => {
     reset({ brand: row.brand ?? '', model: row.model ?? '', year: row.year?.toString() ?? '', engine: row.engine ?? '', displacement: row.displacement ?? '', serial_number: row.serial_number ?? '', dpf: row.dpf ?? false, def: row.def ?? false, can_speed: row.can_speed?.toString() ?? '', emulator: row.emulator ?? '', harness: row.harness ?? '', straight_pipe: row.straight_pipe ?? '', return_status: row.return_status ?? '' })
-    setEditRow(row); setModalOpen(true)
+    setEditRow(row); setFormError(null); setModalOpen(true)
   }
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
     const payload = { ...values, year: values.year ? Number(values.year) : null, can_speed: values.can_speed ? Number(values.can_speed) : null }
-    if (editRow) { await supabase.from('Machines').update(payload).eq('id', editRow.id) }
-    else { await supabase.from('Machines').insert(payload) }
+    const { error } = editRow
+      ? await supabase.from('Machines').update(payload).eq('id', editRow.id)
+      : await supabase.from('Machines').insert(payload)
+    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('Machines').delete().eq('id', deleteRow.id)
+    const { error } = await createClient().from('Machines').delete().eq('id', deleteRow.id)
+    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 
@@ -161,6 +165,7 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
               <input type="checkbox" {...register('def')} className="w-4 h-4 rounded" /> DEF
             </label>
           </div>
+          {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="col-span-2 flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{isSubmitting ? 'Zapisywanie...' : 'Zapisz'}</button>

@@ -100,6 +100,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<Domain | null>(null)
   const [deleteRow, setDeleteRow] = useState<Domain | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [providerOptions, setProviderOptions] = useState<string[]>([])
@@ -158,7 +159,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: Domain) => {
     reset({
       domain: row.domain ?? '',
@@ -166,6 +167,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
       due_date: row.due_date ? row.due_date.slice(0, 10) : '',
     })
     setEditRow(row)
+    setFormError(null)
     setModalOpen(true)
   }
 
@@ -176,11 +178,10 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
       provider: values.provider || null,
       due_date: values.due_date || null,
     }
-    if (editRow) {
-      await supabase.from('domains').update(payload).eq('id', editRow.id)
-    } else {
-      await supabase.from('domains').insert(payload)
-    }
+    const { error } = editRow
+      ? await supabase.from('domains').update(payload).eq('id', editRow.id)
+      : await supabase.from('domains').insert(payload)
+    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
     setModalOpen(false)
     fetchData()
   }
@@ -188,7 +189,8 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('domains').delete().eq('id', deleteRow.id)
+    const { error } = await createClient().from('domains').delete().eq('id', deleteRow.id)
+    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
     setDeleteRow(null)
     setDeleteLoading(false)
     fetchData()
@@ -233,6 +235,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
           <FormField label="Data wygaśnięcia">
             <input {...register('due_date')} type="date" style={inputStyle} />
           </FormField>
+          {formError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>
               Anuluj

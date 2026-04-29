@@ -19,7 +19,8 @@ app/
     (dashboard)/              → wszystkie chronione widoki
       dashboard, candidates, machines, sales, sales-deals,
       sales-quality, sales-text-log, support-cases,
-      support-log, support-text-log, admin/users
+      support-log, support-text-log, admin/users,
+      settings/                 → profil użytkownika (zmiana hasła, info o koncie)
 proxy.ts                      → middleware (Next.js 16 używa proxy.ts zamiast middleware.ts)
 lib/supabase/
   client.ts                   → createClient() dla Client Components
@@ -32,7 +33,7 @@ components/shared/
 ```
 
 ## Routing i auth (proxy.ts)
-- Plik `proxy.ts` (nie `middleware.ts`) pełni rolę middleware
+- Plik `proxy.ts` (nie `middleware.ts`) pełni rolę middleware — konwencja Next.js 16
 - Niezalogowany → redirect do `/${locale}/login`
 - Zalogowany na `/login` → redirect do strony wg roli (patrz `getRedirectPath`)
 - Role: `admin | manager | handlowiec | support | hr | logistyka`
@@ -130,6 +131,14 @@ const columns = useMemo<Column<T>[]>(() => [
 5. DataTable otrzymuje `columnFilters` + `onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}`
 6. CRUD przez Supabase client + `fetchData()` po każdej operacji
 
+## Strona ustawień użytkownika (`/settings`)
+- Dostępna dla wszystkich zalogowanych ról — link w dropdown menu Navbar (ikona użytkownika, góra prawa)
+- `app/[locale]/(dashboard)/settings/page.tsx` — Server Component pobierający `email`, `full_name`, `role` z Supabase
+- `settings/_components/SettingsClient.tsx` — Client Component z:
+  - Kartą informacji (email, imię i nazwisko, rola)
+  - Formularzem zmiany hasła (`supabase.auth.updateUser({ password })`) — walidacja min. 6 znaków + zgodność
+- Tytuł strony w Navbar: klucz `settings` → `'Profil użytkownika'` dodany do `PATH_TO_TITLE`
+
 ## Znane pułapki
 - Tabela `OLX` (`OLXCandidate`) **nie ma kolumny `created_at`** — domyślny `sortKey` musi być `'id'`, nie `'created_at'`
 - Pozostałe tabele mają `created_at` i mogą używać go jako domyślnego sortowania
@@ -208,3 +217,35 @@ input:focus, select:focus, textarea:focus {
 }
 ```
 Działa automatycznie na wszystkich polach — nie dodawaj `:focus` inline.
+
+---
+
+## Status refactoringu — sesja 2026-04-28
+
+### Co zostało zrobione
+
+**✅ Punkt 1 — `requireAuth()` we wszystkich stronach**
+- Wszystkie 13 stron dashboardowych (`candidates`, `domains`, `machines`, `sales`, `sales-deals`, `sales-quality`, `sales-text-log`, `support-cases`, `support-log`, `support-text-log`, `hostings`, `admin/users`, `settings`) używają teraz `requireAuth()` z `lib/auth/helpers.ts` zamiast `user!.id`
+- Wygasła sesja → bezpieczny redirect na `/login` zamiast runtime crash
+- `lib/auth/helpers.ts` — funkcja `requireAuth` istnieje i jest teraz używana
+
+**✅ Punkt 2 — `equals`/`not_equals` w `lib/supabase/filters.ts`**
+- `equals` zmienione z `.ilike(key, v)` → `.eq(key, v)`
+- `not_equals` zmienione z `.filter(key, 'not.ilike', v)` → `.neq(key, v)`
+
+### Co zostało do zrobienia (plik `sugerowane_zmiany.md` w roocie)
+
+Priorytety na następną sesję:
+
+**🔴 Krytyczne — jeszcze nierozwiązane:**
+- **Punkt 3** — Niezgodność skali w formularzu kandydatów: etykiety mówią `(0-10)` ale `ScoreBadge` koloruje wg progów `/100`. Plik: `app/[locale]/(dashboard)/candidates/_components/CandidatesClient.tsx:150-153`
+- **Punkt 4** — Brak walidacji wejścia, mass assignment, race condition i wyciek błędów w `app/api/admin/users/route.ts`
+- **Punkt 5** — Brak obsługi błędów po CRUD (insert/update/delete) — 16 miejsc bez sprawdzenia `{ error }` w `*Client.tsx`
+
+**🟠 Wysokie — jeszcze nierozwiązane:**
+- **Punkt 6** — Złe kolory: `#ef7f1a` → `#e07818` w 6 plikach; `rgba(79,110,247,...)` → `rgba(224,120,24,...)` w `dashboard/page.tsx` i `DashboardCharts.tsx`
+- **Punkt 7** — Hydration mismatch w `SettingsClient.tsx` — `useState` z `localStorage` w lazy init
+- **Punkt 8** — Weryfikacja czy `proxy.ts` faktycznie działa jako middleware w produkcji
+
+### Ważna zasada na przyszłość
+Zmiany wdrażać **po jednej na raz** — czekać na zatwierdzenie przez użytkownika przed przejściem do kolejnej.

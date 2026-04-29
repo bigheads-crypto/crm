@@ -64,6 +64,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
   const [editRow, setEditRow] = useState<SalesQuality | null>(null)
   const [deleteRow, setDeleteRow] = useState<SalesQuality | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [filterOptionsMap, setFilterOptionsMap] = useState<Record<string, string[]>>({})
@@ -117,24 +118,27 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: SalesQuality) => {
     reset({ phone: row.phone ?? '', salesman: row.salesman ?? '', clients_name: row.clients_name ?? '', category: row.category ?? '', rating: row.rating?.toString() ?? '', feedback: row.feedback ?? '', detected_engine: row.detected_engine ?? '', summary: row.summary ?? '', duration: row.duration?.toString() ?? '', deal_id: row.deal_id?.toString() ?? '' })
-    setEditRow(row); setModalOpen(true)
+    setEditRow(row); setFormError(null); setModalOpen(true)
   }
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
     const payload = { ...values, rating: values.rating ? Number(values.rating) : null, duration: values.duration ? Number(values.duration) : null, deal_id: values.deal_id ? Number(values.deal_id) : null }
-    if (editRow) { await supabase.from('Sales Quality').update(payload).eq('id', editRow.id) }
-    else { await supabase.from('Sales Quality').insert(payload) }
+    const { error } = editRow
+      ? await supabase.from('Sales Quality').update(payload).eq('id', editRow.id)
+      : await supabase.from('Sales Quality').insert(payload)
+    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    await createClient().from('Sales Quality').delete().eq('id', deleteRow.id)
+    const { error } = await createClient().from('Sales Quality').delete().eq('id', deleteRow.id)
+    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 
@@ -170,6 +174,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
           <FormField label="ID transakcji"><input {...register('deal_id')} type="number" style={inputStyle} /></FormField>
           <div className="col-span-2"><FormField label="Feedback"><textarea {...register('feedback')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField></div>
           <div className="col-span-2"><FormField label="Podsumowanie"><textarea {...register('summary')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField></div>
+          {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="col-span-2 flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{isSubmitting ? 'Zapisywanie...' : 'Zapisz'}</button>
