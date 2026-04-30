@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth/helpers'
 import { SupportTextLogClient } from './_components/SupportTextLogClient'
 import type { Role } from '@/lib/supabase/types'
 
 export default async function SupportTextLogPage() {
+  const { profile } = await requireAuth()
+  const role = profile.role as Role
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
-  const role = (profile?.role ?? 'support') as Role
 
   const { data, count } = await supabase
     .from('Support Text Log')

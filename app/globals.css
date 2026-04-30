@@ -16,6 +16,7 @@
   --danger: #e8384f;
   --success: #10a872;
   --warning: #e8a800;
+  --accent-shadow: rgba(224, 120, 24, 0.15);
 }
 
 @theme inline {
@@ -38,7 +39,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px rgba(239, 127, 26, 0.15);
+  box-shadow: 0 0 0 3px var(--accent-shadow);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 

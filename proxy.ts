@@ -106,7 +106,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Dopasuj wszystkie ścieżki oprócz plików statycznych Next.js
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)',
+    // Dopasuj wszystkie ścieżki oprócz plików statycznych i API routes
+    '/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)',
   ],
 }

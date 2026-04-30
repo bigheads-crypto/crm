@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth/helpers'
 import { AdminUsersClient } from './_components/AdminUsersClient'
 
 export default async function AdminUsersPage({
@@ -8,12 +8,9 @@ export default async function AdminUsersPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const { profile } = await requireAuth(locale)
 
-  // Tylko admin ma dostęp do tej strony
-  if (profile?.role !== 'admin') {
+  if (profile.role !== 'admin') {
     redirect(`/${locale}/dashboard`)
   }
 

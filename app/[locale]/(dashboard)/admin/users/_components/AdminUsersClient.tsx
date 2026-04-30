@@ -78,9 +78,11 @@ export function AdminUsersClient() {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/admin/users')
       const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Błąd ładowania użytkowników'); setLoading(false); return }
       setUsers(json.users ?? [])
     } catch { setError('Błąd ładowania użytkowników') }
     setLoading(false)
@@ -90,35 +92,45 @@ export function AdminUsersClient() {
 
   const onCreate = async (values: CreateForm) => {
     setError(null)
-    const res = await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', ...values }),
-    })
-    const json = await res.json()
-    if (!res.ok) { setError(json.error); return }
-    setCreateOpen(false); reset(); fetchUsers()
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', ...values }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Nie udało się utworzyć użytkownika'); return }
+      setCreateOpen(false); reset(); fetchUsers()
+    } catch { setError('Błąd połączenia z serwerem') }
   }
 
   const onUpdateRole = async () => {
     if (!editUser) return
     setEditSaving(true)
-    await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_role', userId: editUser.id, role: editRole, full_name: editName }),
-    })
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_role', userId: editUser.id, role: editRole, full_name: editName }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Błąd zapisu'); setEditSaving(false); return }
+    } catch { setError('Błąd połączenia z serwerem') }
     setEditUser(null); setEditSaving(false); fetchUsers()
   }
 
   const onDelete = async () => {
     if (!deleteUser) return
     setDeleteLoading(true)
-    await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', userId: deleteUser.id }),
-    })
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', userId: deleteUser.id }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Błąd usuwania'); setDeleteLoading(false); return }
+    } catch { setError('Błąd połączenia z serwerem') }
     setDeleteUser(null); setDeleteLoading(false); fetchUsers()
   }
 

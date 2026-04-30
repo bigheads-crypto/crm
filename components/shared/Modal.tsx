@@ -37,6 +37,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
         {/* Treść modala */}
         <Dialog.Content
+          aria-describedby={undefined}
           className={`fixed left-1/2 top-1/2 z-50 w-full ${sizeClasses[size]}`}
           style={{
             backgroundColor: 'var(--surface-2)',

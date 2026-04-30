@@ -32,10 +32,10 @@ export function applyColumnFilters(query: any, filters: ColumnFilters): any {
         if (v) query = query.filter(key, 'not.ilike', `%${v}%`)
         break
       case 'equals':
-        if (v) query = query.ilike(key, v)
+        if (v) query = query.eq(key, v)
         break
       case 'not_equals':
-        if (v) query = query.filter(key, 'not.ilike', v)
+        if (v) query = query.neq(key, v)
         break
       case 'starts_with':
         if (v) query = query.ilike(key, `${v}%`)
