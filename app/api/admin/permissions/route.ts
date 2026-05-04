@@ -2,7 +2,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { TAB_DEFS, ALL_ROLES, DEFAULT_PERMISSIONS } from '@/lib/permissions-config'
+import { TAB_DEFS, ALL_ROLES, getDefaultPerms } from '@/lib/permissions-config'
 
 function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -28,27 +28,25 @@ export async function GET() {
     const adminClient = createAdminClient()
     const { data: dbPerms, error } = await adminClient
       .from('tab_permissions')
-      .select('role, tab_key, enabled')
+      .select('role, tab_key, can_view, can_write, can_edit')
 
     if (error) throw error
 
-    const result: Record<string, Record<string, boolean>> = {}
+    const result: Record<string, Record<string, { canView: boolean; canWrite: boolean; canEdit: boolean }>> = {}
 
     for (const tab of TAB_DEFS) {
       result[tab.key] = {}
       for (const role of ALL_ROLES) {
         if (role === 'admin') {
-          result[tab.key][role] = true
+          result[tab.key][role] = { canView: true, canWrite: true, canEdit: true }
           continue
         }
         const dbEntry = (dbPerms ?? []).find(
-          (p: { role: string; tab_key: string; enabled: boolean }) =>
-            p.role === role && p.tab_key === tab.key
+          (p: { role: string; tab_key: string }) => p.role === role && p.tab_key === tab.key
         )
-        result[tab.key][role] =
-          dbEntry !== undefined
-            ? dbEntry.enabled
-            : (DEFAULT_PERMISSIONS[tab.key]?.includes(role) ?? false)
+        result[tab.key][role] = dbEntry
+          ? { canView: dbEntry.can_view, canWrite: dbEntry.can_write, canEdit: dbEntry.can_edit }
+          : getDefaultPerms(tab.key, role)
       }
     }
 
@@ -61,6 +59,7 @@ export async function GET() {
 const upsertSchema = z.object({
   role: z.enum(['manager', 'handlowiec', 'support', 'hr', 'logistyka']),
   tabKey: z.string().refine((k) => TAB_DEFS.some((t) => t.key === k), 'Nieznana zakładka'),
+  permType: z.enum(['canView', 'canWrite', 'canEdit']),
   enabled: z.boolean(),
 })
 
@@ -82,11 +81,31 @@ export async function POST(request: NextRequest) {
 
   try {
     const adminClient = createAdminClient()
-    const { role, tabKey, enabled } = parsed.data
+    const { role, tabKey, permType, enabled } = parsed.data
+
+    // Mapowanie canView→can_view itd.
+    const colMap = { canView: 'can_view', canWrite: 'can_write', canEdit: 'can_edit' } as const
+
+    // Pobierz aktualny wiersz żeby móc zrobić upsert z pełnymi wartościami
+    const { data: existing } = await adminClient
+      .from('tab_permissions')
+      .select('can_view, can_write, can_edit')
+      .eq('role', role)
+      .eq('tab_key', tabKey)
+      .maybeSingle()
+
+    const defaults = getDefaultPerms(tabKey, role)
+    const current = existing ?? {
+      can_view: defaults.canView,
+      can_write: defaults.canWrite,
+      can_edit: defaults.canEdit,
+    }
+
+    const updated = { ...current, [colMap[permType]]: enabled }
 
     const { error } = await adminClient
       .from('tab_permissions')
-      .upsert({ role, tab_key: tabKey, enabled }, { onConflict: 'role,tab_key' })
+      .upsert({ role, tab_key: tabKey, ...updated }, { onConflict: 'role,tab_key' })
 
     if (error) throw error
     return NextResponse.json({ success: true })

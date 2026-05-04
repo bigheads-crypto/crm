@@ -8,6 +8,18 @@ export interface TabDef {
   label: string
 }
 
+export interface TabPerms {
+  canView: boolean
+  canWrite: boolean
+  canEdit: boolean
+}
+
+export const PERM_TYPES: { key: keyof TabPerms; label: string }[] = [
+  { key: 'canView', label: 'Wyświetlanie' },
+  { key: 'canWrite', label: 'Wpisywanie' },
+  { key: 'canEdit', label: 'Edytowanie' },
+]
+
 export const TAB_DEFS: TabDef[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'sales-deals', label: 'Transakcje' },
@@ -23,8 +35,8 @@ export const TAB_DEFS: TabDef[] = [
   { key: 'hostings', label: 'Hostingi' },
 ]
 
-// Default permissions (matches hardcoded NAV_ITEMS in Sidebar)
-export const DEFAULT_PERMISSIONS: Record<string, Role[]> = {
+// Które role mogą widzieć daną zakładkę (domyślne)
+const DEFAULT_VIEW: Record<string, Role[]> = {
   'dashboard': ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'],
   'sales-deals': ['admin', 'handlowiec', 'manager'],
   'sales-quality': ['admin', 'handlowiec', 'manager'],
@@ -40,3 +52,10 @@ export const DEFAULT_PERMISSIONS: Record<string, Role[]> = {
   'admin/users': ['admin'],
   'admin/permissions': ['admin'],
 }
+
+export function getDefaultPerms(tabKey: string, role: Role): TabPerms {
+  const canView = DEFAULT_VIEW[tabKey]?.includes(role) ?? false
+  return { canView, canWrite: canView, canEdit: canView }
+}
+
+export const DEFAULT_VIEW_MAP = DEFAULT_VIEW
