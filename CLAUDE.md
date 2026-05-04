@@ -247,5 +247,6 @@ Priorytety na następną sesję:
 - **Punkt 7** — Hydration mismatch w `SettingsClient.tsx` — `useState` z `localStorage` w lazy init
 - **Punkt 8** — Weryfikacja czy `proxy.ts` faktycznie działa jako middleware w produkcji
 
-### Ważna zasada na przyszłość
-Zmiany wdrażać **po jednej na raz** — czekać na zatwierdzenie przez użytkownika przed przejściem do kolejnej.
+### Ważne zasady na przyszłość
+- Zmiany wdrażać **po jednej na raz** — czekać na zatwierdzenie przez użytkownika przed przejściem do kolejnej.
+- **Przed każdym commitem i pushem** zaktualizować `lib/version.ts` — wersja musi zgadzać się z numerem w tytule commita.
