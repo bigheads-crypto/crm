@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
@@ -51,6 +51,57 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 
 const inputStyle = { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', width: '100%', outline: 'none' }
 
+function SalesmanAutocomplete({ salesmen, value, onChange, inputStyle }: {
+  salesmen: string[]
+  value: string
+  onChange: (v: string) => void
+  inputStyle: React.CSSProperties
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const filtered = salesmen.filter(s => s.toLowerCase().includes((value ?? '').toLowerCase()))
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <input
+        value={value}
+        style={inputStyle}
+        autoComplete="off"
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+          backgroundColor: 'var(--surface-2)', border: '1px solid var(--border)',
+          borderRadius: '8px', marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          overflow: 'hidden',
+        }}>
+          {filtered.map(s => (
+            <div
+              key={s}
+              onMouseDown={(e) => { e.preventDefault(); onChange(s); setOpen(false) }}
+              style={{ padding: '8px 12px', fontSize: '14px', cursor: 'pointer', color: 'var(--text)' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(224,120,24,0.12)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props { initialData: Sale[]; initialCount: number; role: Role }
 
 export function SalesClient({ initialData, initialCount, role }: Props) {
@@ -90,7 +141,33 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
   const canEdit = ['admin', 'handlowiec'].includes(role)
   const canDelete = role === 'admin'
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const phoneWatch = useWatch({ control, name: 'phone' })
+  const [autofilled, setAutofilled] = useState(false)
+
+  useEffect(() => {
+    if (editRow || !phoneWatch || phoneWatch.length < 6) { setAutofilled(false); return }
+    const timer = setTimeout(async () => {
+      const { data: match } = await createClient()
+        .from('Sales')
+        .select('salesman, email_address, shipping_details, invoice_details, company')
+        .eq('phone', phoneWatch)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (match) {
+        if (match.salesman) setValue('salesman', match.salesman)
+        if (match.email_address) setValue('email_address', match.email_address)
+        if (match.shipping_details) setValue('shipping_details', match.shipping_details)
+        if (match.invoice_details) setValue('invoice_details', match.invoice_details)
+        if (match.company) setValue('company', match.company)
+        setAutofilled(true)
+      } else {
+        setAutofilled(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [phoneWatch, editRow, setValue])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -105,7 +182,7 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
+  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setAutofilled(false); setModalOpen(true) }
   const openEdit = (row: Sale) => {
     reset({ phone: row.phone ?? '', salesman: row.salesman ?? '', email_address: row.email_address ?? '', sale_status: row.sale_status ?? '', shipping_details: row.shipping_details ?? '', invoice_details: row.invoice_details ?? '', tracking_number: row.tracking_number ?? '', paypal_invoice_number: row.paypal_invoice_number ?? '', company: row.company ?? '', machine_id: row.machine_id?.toString() ?? '' })
     setEditRow(row); setFormError(null); setModalOpen(true)
@@ -160,8 +237,26 @@ export function SalesClient({ initialData, initialCount, role }: Props) {
       />
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj zamówienie' : 'Nowe zamówienie'} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
+          {autofilled && !editRow && (
+            <div className="col-span-2 text-xs px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(16,168,114,0.1)', color: '#10a872', border: '1px solid rgba(16,168,114,0.25)' }}>
+              Uzupełniono dane z poprzedniego zamówienia tego klienta
+            </div>
+          )}
           <FormField label="Telefon *" error={errors.phone?.message}><input {...register('phone')} style={inputStyle} /></FormField>
-          <FormField label="Handlowiec"><input {...register('salesman')} style={inputStyle} /></FormField>
+          <FormField label="Handlowiec">
+            <Controller
+              name="salesman"
+              control={control}
+              render={({ field }) => (
+                <SalesmanAutocomplete
+                  salesmen={salesmen}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  inputStyle={inputStyle}
+                />
+              )}
+            />
+          </FormField>
           <FormField label="Email"><input {...register('email_address')} style={inputStyle} /></FormField>
           <FormField label="Status">
             <select {...register('sale_status')} style={inputStyle}>
