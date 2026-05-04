@@ -13,7 +13,8 @@
     "domains": "Domeny",
     "hostings": "Hostingi",
     "adminUsers": "Użytkownicy",
-    "adminPermissions": "Uprawnienia zakładek"
+    "adminPermissions": "Uprawnienia zakładek",
+    "activityLog": "Logi aktywności"
   },
   "auth": {
     "title": "Zaloguj się do CRM",

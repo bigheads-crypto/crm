@@ -21,6 +21,7 @@ import {
   Globe,
   Server,
   Shield,
+  Activity,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -50,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'hostings', href: '/hostings', icon: Server },
   { key: 'adminUsers', href: '/admin/users', icon: Settings },
   { key: 'adminPermissions', href: '/admin/permissions', icon: Shield },
+  { key: 'activityLog', href: '/admin/activity-log', icon: Activity },
 ]
 
 interface SidebarProps {

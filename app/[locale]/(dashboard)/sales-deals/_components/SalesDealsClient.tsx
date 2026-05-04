@@ -9,6 +9,7 @@ import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
+import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SalesDeal, Role } from '@/lib/supabase/types'
 
 const schema = z.object({
@@ -134,6 +135,8 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
       ? await supabase.from('Sales Deals').update(values).eq('id', editRow.id)
       : await supabase.from('Sales Deals').insert(values)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    void logActivity(supabase, editRow ? 'update' : 'create', 'sales-deals', editRow?.id ?? null, `Transakcja: ${values.client_name ?? values.phone}`, changes)
     setModalOpen(false)
     fetchData()
   }
@@ -144,6 +147,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     const supabase = createClient()
     const { error } = await supabase.from('Sales Deals').delete().eq('id', deleteRow.id)
     if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    void logActivity(supabase, 'delete', 'sales-deals', deleteRow.id, `Transakcja: ${deleteRow.client_name ?? deleteRow.phone}`)
     setDeleteRow(null)
     setDeleteLoading(false)
     fetchData()

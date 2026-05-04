@@ -33,6 +33,7 @@ export const TAB_DEFS: TabDef[] = [
   { key: 'machines', label: 'Maszyny' },
   { key: 'domains', label: 'Domeny' },
   { key: 'hostings', label: 'Hostingi' },
+  { key: 'admin/activity-log', label: 'Logi aktywności' },
 ]
 
 // Które role mogą widzieć daną zakładkę (domyślne)
@@ -51,6 +52,7 @@ const DEFAULT_VIEW: Record<string, Role[]> = {
   'hostings': ['admin', 'manager'],
   'admin/users': ['admin'],
   'admin/permissions': ['admin'],
+  'admin/activity-log': ['admin', 'manager'],
 }
 
 export function getDefaultPerms(tabKey: string, role: Role): TabPerms {

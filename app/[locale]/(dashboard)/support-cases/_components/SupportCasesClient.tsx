@@ -9,6 +9,7 @@ import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
+import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SupportCase, Role } from '@/lib/supabase/types'
 
 const schema = z.object({
@@ -126,14 +127,18 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
       ? await supabase.from('Support Case').update(values).eq('id', editRow.id)
       : await supabase.from('Support Case').insert(values)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    void logActivity(supabase, editRow ? 'update' : 'create', 'support-cases', editRow?.id ?? null, `Sprawa: ${values.clients_name ?? values.phone}`, changes)
     setModalOpen(false); fetchData()
   }
 
   const onDelete = async () => {
     if (!deleteRow) return
     setDeleteLoading(true)
-    const { error } = await createClient().from('Support Case').delete().eq('id', deleteRow.id)
+    const supabase = createClient()
+    const { error } = await supabase.from('Support Case').delete().eq('id', deleteRow.id)
     if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    void logActivity(supabase, 'delete', 'support-cases', deleteRow.id, `Sprawa: ${deleteRow.clients_name ?? deleteRow.phone}`)
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
 

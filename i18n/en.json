@@ -13,7 +13,8 @@
     "domains": "Domains",
     "hostings": "Hostings",
     "adminUsers": "Users",
-    "adminPermissions": "Tab Permissions"
+    "adminPermissions": "Tab Permissions",
+    "activityLog": "Activity Log"
   },
   "auth": {
     "title": "Sign in to CRM",

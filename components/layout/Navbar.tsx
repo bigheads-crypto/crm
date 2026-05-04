@@ -22,6 +22,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   machines: 'Maszyny',
   users: 'Użytkownicy',
   permissions: 'Uprawnienia zakładek',
+  'activity-log': 'Logi aktywności',
   settings: 'Profil użytkownika',
 }
 
