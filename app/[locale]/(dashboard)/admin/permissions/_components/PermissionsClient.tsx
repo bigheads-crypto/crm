@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import type { CSSProperties } from 'react'
 import { TAB_DEFS, ALL_ROLES, PERM_TYPES } from '@/lib/permissions-config'
-import type { Role, } from '@/lib/supabase/types'
+import type { Role } from '@/lib/supabase/types'
 import type { TabPerms } from '@/lib/permissions-config'
 
 type PermMatrix = Record<string, Record<string, TabPerms>>
@@ -111,7 +112,7 @@ export function PermissionsClient() {
     )
   }
 
-  const thBase: React.CSSProperties = {
+  const thBase: CSSProperties = {
     backgroundColor: 'var(--surface-2)',
     borderBottom: '2px solid var(--border)',
     padding: '8px 6px',
