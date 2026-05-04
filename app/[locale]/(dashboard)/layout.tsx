@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Navbar } from '@/components/layout/Navbar'
 import { createClient } from '@/lib/supabase/server'
+import { getAllowedTabs } from '@/lib/permissions'
 import type { Role } from '@/lib/supabase/types'
 
 export default async function DashboardLayout({
@@ -33,11 +34,12 @@ export default async function DashboardLayout({
 
   const role = (profile?.role ?? 'handlowiec') as Role
   const userEmail = user.email ?? ''
+  const allowedTabs = await getAllowedTabs(role)
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Sidebar po lewej */}
-      <Sidebar role={role} locale={locale} />
+      <Sidebar role={role} locale={locale} allowedTabs={allowedTabs} />
 
       {/* Główna część — Navbar + treść */}
       <div className="flex flex-1 flex-col overflow-hidden">

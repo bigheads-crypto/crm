@@ -12,7 +12,8 @@
     "machines": "Machines",
     "domains": "Domains",
     "hostings": "Hostings",
-    "adminUsers": "Users"
+    "adminUsers": "Users",
+    "adminPermissions": "Tab Permissions"
   },
   "auth": {
     "title": "Sign in to CRM",

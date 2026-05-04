@@ -20,6 +20,7 @@ import {
   Settings,
   Globe,
   Server,
+  Shield,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -31,103 +32,42 @@ interface NavItem {
   key: string
   href: string
   icon: LucideIcon
-  roles: Role[]
 }
 
-// Mapa nawigacji — klucz, href i dozwolone role
+// Mapa nawigacji — kolejność i ikony (widoczność kontrolowana przez allowedTabs)
 const NAV_ITEMS: NavItem[] = [
-  {
-    key: 'dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    roles: ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'],
-  },
-  {
-    key: 'salesDeals',
-    href: '/sales-deals',
-    icon: Handshake,
-    roles: ['admin', 'handlowiec', 'manager'],
-  },
-  {
-    key: 'salesQuality',
-    href: '/sales-quality',
-    icon: Star,
-    roles: ['admin', 'handlowiec', 'manager'],
-  },
-  {
-    key: 'sales',
-    href: '/sales',
-    icon: ShoppingCart,
-    roles: ['admin', 'handlowiec', 'logistyka', 'manager'],
-  },
-  {
-    key: 'salesTextLog',
-    href: '/sales-text-log',
-    icon: MessageSquare,
-    roles: ['admin', 'handlowiec', 'manager'],
-  },
-  {
-    key: 'supportCases',
-    href: '/support-cases',
-    icon: HeadphonesIcon,
-    roles: ['admin', 'support', 'manager'],
-  },
-  {
-    key: 'supportLog',
-    href: '/support-log',
-    icon: ClipboardList,
-    roles: ['admin', 'support', 'manager'],
-  },
-  {
-    key: 'supportTextLog',
-    href: '/support-text-log',
-    icon: MessageCircle,
-    roles: ['admin', 'support', 'manager'],
-  },
-  {
-    key: 'candidates',
-    href: '/candidates',
-    icon: Users,
-    roles: ['admin', 'hr', 'manager'],
-  },
-  {
-    key: 'machines',
-    href: '/machines',
-    icon: Cpu,
-    roles: ['admin', 'handlowiec', 'logistyka', 'manager'],
-  },
-  {
-    key: 'domains',
-    href: '/domains',
-    icon: Globe,
-    roles: ['admin', 'manager'],
-  },
-  {
-    key: 'hostings',
-    href: '/hostings',
-    icon: Server,
-    roles: ['admin', 'manager'],
-  },
-  {
-    key: 'adminUsers',
-    href: '/admin/users',
-    icon: Settings,
-    roles: ['admin'],
-  },
+  { key: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { key: 'salesDeals', href: '/sales-deals', icon: Handshake },
+  { key: 'salesQuality', href: '/sales-quality', icon: Star },
+  { key: 'sales', href: '/sales', icon: ShoppingCart },
+  { key: 'salesTextLog', href: '/sales-text-log', icon: MessageSquare },
+  { key: 'supportCases', href: '/support-cases', icon: HeadphonesIcon },
+  { key: 'supportLog', href: '/support-log', icon: ClipboardList },
+  { key: 'supportTextLog', href: '/support-text-log', icon: MessageCircle },
+  { key: 'candidates', href: '/candidates', icon: Users },
+  { key: 'machines', href: '/machines', icon: Cpu },
+  { key: 'domains', href: '/domains', icon: Globe },
+  { key: 'hostings', href: '/hostings', icon: Server },
+  { key: 'adminUsers', href: '/admin/users', icon: Settings },
+  { key: 'adminPermissions', href: '/admin/permissions', icon: Shield },
 ]
 
 interface SidebarProps {
   role: Role
   locale: string
+  allowedTabs: string[]
 }
 
-export function Sidebar({ role, locale }: SidebarProps) {
+export function Sidebar({ role, locale, allowedTabs }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const t = useTranslations('nav')
 
-  // Filtruj elementy nawigacji po roli
-  const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(role))
+  // Filtruj elementy nawigacji na podstawie dynamicznych uprawnień
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    const tabKey = item.href.replace(/^\//, '')
+    return allowedTabs.includes(tabKey)
+  })
 
   // Sprawdź czy link jest aktywny
   const isActive = (href: string) => {

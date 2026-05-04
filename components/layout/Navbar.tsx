@@ -21,6 +21,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   candidates: 'Kandydaci',
   machines: 'Maszyny',
   users: 'Użytkownicy',
+  permissions: 'Uprawnienia zakładek',
   settings: 'Profil użytkownika',
 }
 

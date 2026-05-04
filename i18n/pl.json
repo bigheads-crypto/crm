@@ -12,7 +12,8 @@
     "machines": "Maszyny",
     "domains": "Domeny",
     "hostings": "Hostingi",
-    "adminUsers": "Użytkownicy"
+    "adminUsers": "Użytkownicy",
+    "adminPermissions": "Uprawnienia zakładek"
   },
   "auth": {
     "title": "Zaloguj się do CRM",
