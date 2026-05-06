@@ -206,3 +206,33 @@ export interface Hosting {
 
 export type HostingInsert = Omit<Hosting, 'id' | 'created_at'>
 export type HostingUpdate = Partial<HostingInsert>
+
+// Support Backlog — główna sprawa klienta
+export interface SupportBacklog {
+  id: number
+  created_at: string
+  updated_at: string
+  phone: string | null
+  invoice_number: string | null
+  client_name: string | null
+  status: string
+  agent: string | null
+}
+
+export type SupportBacklogInsert = Omit<SupportBacklog, 'id' | 'created_at' | 'updated_at'>
+export type SupportBacklogUpdate = Partial<SupportBacklogInsert>
+
+// Support Backlog Log — pojedyncza interakcja w ramach sprawy
+export interface SupportBacklogLog {
+  id: number
+  created_at: string
+  backlog_id: number
+  agent: string | null
+  problem: string | null
+  proposed_solution: string | null
+  outcome: string | null
+  notes: string | null
+}
+
+export type SupportBacklogLogInsert = Omit<SupportBacklogLog, 'id' | 'created_at'>
+export type SupportBacklogLogUpdate = Partial<SupportBacklogLogInsert>

@@ -16,6 +16,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   sales: 'Zamówienia',
   'sales-text-log': 'SMS Sprzedaż',
   'support-cases': 'Sprawy supportu',
+  'support-backlog': 'Support Backlog',
   'support-log': 'Log supportu',
   'support-text-log': 'SMS Support',
   candidates: 'Kandydaci',

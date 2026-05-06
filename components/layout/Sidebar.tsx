@@ -24,6 +24,7 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  BookMarked,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/lib/supabase/types'
@@ -43,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'sales', href: '/sales', icon: ShoppingCart },
   { key: 'salesTextLog', href: '/sales-text-log', icon: MessageSquare },
   { key: 'supportCases', href: '/support-cases', icon: HeadphonesIcon },
+  { key: 'supportBacklog', href: '/support-backlog', icon: BookMarked },
   { key: 'supportLog', href: '/support-log', icon: ClipboardList },
   { key: 'supportTextLog', href: '/support-text-log', icon: MessageCircle },
   { key: 'candidates', href: '/candidates', icon: Users },

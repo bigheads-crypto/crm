@@ -247,6 +247,36 @@ Priorytety na następną sesję:
 - **Punkt 7** — Hydration mismatch w `SettingsClient.tsx` — `useState` z `localStorage` w lazy init
 - **Punkt 8** — Weryfikacja czy `proxy.ts` faktycznie działa jako middleware w produkcji
 
+## System uprawnień zakładek — v2.2
+
+### Supabase — tabela `tab_permissions`
+```sql
+CREATE TABLE tab_permissions (
+  role text NOT NULL,
+  tab_key text NOT NULL,
+  can_view boolean NOT NULL DEFAULT true,
+  can_write boolean NOT NULL DEFAULT true,
+  can_edit boolean NOT NULL DEFAULT true,
+  PRIMARY KEY (role, tab_key)
+);
+ALTER TABLE tab_permissions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "authenticated_read_tab_permissions"
+ON tab_permissions FOR SELECT TO authenticated USING (true);
+```
+
+### Pliki
+- `lib/permissions-config.ts` — stałe: `TAB_DEFS`, `ALL_ROLES`, `PERM_TYPES`, `getDefaultPerms()`, `DEFAULT_VIEW_MAP`
+- `lib/permissions.ts` — server function `getAllowedTabs(role)`: admin → wszystko, reszta → DB + fallback do domyślnych
+- `app/api/admin/permissions/route.ts` — GET zwraca macierz, POST upsertuje `(role, tab_key, can_view, can_write, can_edit)`
+- `app/[locale]/(dashboard)/admin/permissions/` — panel admina z macierzą checkboxów
+
+### Jak działa
+- `DashboardLayout` wywołuje `getAllowedTabs(role)` server-side i przekazuje `allowedTabs: string[]` do `Sidebar`
+- `Sidebar` filtruje `NAV_ITEMS` po `allowedTabs` (tab key = `item.href` bez wiodącego `/`)
+- Admin zawsze ma wszystkie zakładki (early return bez zapytania DB)
+- Fallback do `DEFAULT_VIEW_MAP` gdy tabela nie istnieje (try/catch w `getAllowedTabs`)
+- `can_write` i `can_edit` są zapisywane w DB, ale jeszcze nie podłączone do komponentów stron
+
 ### Ważne zasady na przyszłość
 - Zmiany wdrażać **po jednej na raz** — czekać na zatwierdzenie przez użytkownika przed przejściem do kolejnej.
 - **Przed każdym commitem i pushem** zaktualizować `lib/version.ts` — wersja musi zgadzać się z numerem w tytule commita.
