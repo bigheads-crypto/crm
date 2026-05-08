@@ -217,6 +217,7 @@ export interface Review {
   napisano: boolean | null
   napisac: boolean | null
   wystawil: boolean | null
+  google_name: string | null
 }
 
 export type ReviewInsert = Omit<Review, 'id' | 'created_at'>

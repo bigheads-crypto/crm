@@ -23,6 +23,7 @@ const schema = z.object({
   napisano: z.boolean().optional(),
   napisac: z.boolean().optional(),
   wystawil: z.boolean().optional(),
+  google_name: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -122,6 +123,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
       sortable: true,
       render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—',
     },
+    { key: 'google_name', header: 'Google Name', sortable: true, filterable: true },
     {
       key: 'napisano',
       header: 'Napisano',
@@ -155,7 +157,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({ technik: userName, contact: '', channel: undefined, napisano: false, napisac: false, wystawil: false })
+    reset({ technik: userName, contact: '', channel: undefined, napisano: false, napisac: false, wystawil: false, google_name: '' })
     setEditRow(null); setFormError(null); setModalOpen(true)
   }
 
@@ -167,6 +169,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
       napisano: row.napisano ?? false,
       napisac: row.napisac ?? false,
       wystawil: row.wystawil ?? false,
+      google_name: row.google_name ?? '',
     })
     setEditRow(row); setFormError(null); setModalOpen(true)
   }
@@ -229,6 +232,9 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
                 <option key={ch} value={ch}>{ch}</option>
               ))}
             </select>
+          </FormField>
+          <FormField label="Google Name (opcjonalnie)">
+            <input {...register('google_name')} placeholder="np. Jan K." style={inputStyle} />
           </FormField>
           <div
             className="flex gap-6 px-3 py-3 rounded-lg mt-1"
