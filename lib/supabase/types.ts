@@ -207,6 +207,18 @@ export interface Hosting {
 export type HostingInsert = Omit<Hosting, 'id' | 'created_at'>
 export type HostingUpdate = Partial<HostingInsert>
 
+// Opinie klientów (linki do opinii wysyłane po wsparciu)
+export interface Review {
+  id: number
+  created_at: string
+  technik: string | null
+  contact: string | null
+  channel: string | null
+}
+
+export type ReviewInsert = Omit<Review, 'id' | 'created_at'>
+export type ReviewUpdate = Partial<ReviewInsert>
+
 // Problemy maszyn (powtarzające się, bez rozwiązania)
 export interface MachineIssue {
   id: number

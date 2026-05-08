@@ -26,6 +26,7 @@ import {
   ChevronRight,
   BookMarked,
   AlertTriangle,
+  ThumbsUp,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/lib/supabase/types'
@@ -51,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'candidates', href: '/candidates', icon: Users },
   { key: 'machines', href: '/machines', icon: Cpu },
   { key: 'machineIssues', href: '/machine-issues', icon: AlertTriangle },
+  { key: 'reviews', href: '/reviews', icon: ThumbsUp },
   { key: 'domains', href: '/domains', icon: Globe },
   { key: 'hostings', href: '/hostings', icon: Server },
   { key: 'adminUsers', href: '/admin/users', icon: Settings },
