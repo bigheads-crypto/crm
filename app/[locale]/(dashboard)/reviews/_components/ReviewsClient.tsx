@@ -12,7 +12,7 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Review, Role } from '@/lib/supabase/types'
 
-const CHANNELS = ['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email']
+const CHANNELS = ['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email'] as const
 
 const schema = z.object({
   technik: z.string().min(1, 'Technik jest wymagany'),
@@ -20,6 +20,9 @@ const schema = z.object({
   channel: z.enum(['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email'], {
     errorMap: () => ({ message: 'Wybierz kanał wysyłki' }),
   }),
+  napisano: z.boolean().optional(),
+  napisac: z.boolean().optional(),
+  wystawil: z.boolean().optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -43,6 +46,12 @@ function ChannelBadge({ value }: { value: string | null }) {
       {value}
     </span>
   )
+}
+
+function CheckBadge({ value }: { value: boolean | null }) {
+  if (value == null || value === false)
+    return <span style={{ color: 'var(--text-dim)', fontSize: '16px' }}>—</span>
+  return <span style={{ color: '#10a872', fontSize: '16px' }}>✓</span>
 }
 
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
@@ -104,14 +113,32 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
       header: 'Kanał',
       sortable: true,
       filterable: true,
-      filterOptions: CHANNELS,
+      filterOptions: [...CHANNELS],
       render: (v) => <ChannelBadge value={v as string | null} />,
     },
     {
       key: 'created_at',
-      header: 'Data',
+      header: 'Data dodania',
       sortable: true,
       render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—',
+    },
+    {
+      key: 'napisano',
+      header: 'Napisano',
+      sortable: false,
+      render: (v) => <CheckBadge value={v as boolean | null} />,
+    },
+    {
+      key: 'napisac',
+      header: 'Napisać',
+      sortable: false,
+      render: (v) => <CheckBadge value={v as boolean | null} />,
+    },
+    {
+      key: 'wystawil',
+      header: 'Wystawił',
+      sortable: false,
+      render: (v) => <CheckBadge value={v as boolean | null} />,
     },
   ], [])
 
@@ -128,7 +155,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({ technik: userName, contact: '', channel: undefined })
+    reset({ technik: userName, contact: '', channel: undefined, napisano: false, napisac: false, wystawil: false })
     setEditRow(null); setFormError(null); setModalOpen(true)
   }
 
@@ -137,6 +164,9 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
       technik: row.technik ?? '',
       contact: row.contact ?? '',
       channel: (row.channel as FormData['channel']) ?? undefined,
+      napisano: row.napisano ?? false,
+      napisac: row.napisac ?? false,
+      wystawil: row.wystawil ?? false,
     })
     setEditRow(row); setFormError(null); setModalOpen(true)
   }
@@ -200,6 +230,21 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
               ))}
             </select>
           </FormField>
+          <div
+            className="flex gap-6 px-3 py-3 rounded-lg mt-1"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+          >
+            {([
+              { name: 'napisano', label: 'Napisano' },
+              { name: 'napisac', label: 'Napisać' },
+              { name: 'wystawil', label: 'Wystawił' },
+            ] as const).map(({ name, label }) => (
+              <label key={name} className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>
+                <input type="checkbox" {...register(name)} className="w-4 h-4 rounded" />
+                {label}
+              </label>
+            ))}
+          </div>
           {formError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>

@@ -214,6 +214,9 @@ export interface Review {
   technik: string | null
   contact: string | null
   channel: string | null
+  napisano: boolean | null
+  napisac: boolean | null
+  wystawil: boolean | null
 }
 
 export type ReviewInsert = Omit<Review, 'id' | 'created_at'>
