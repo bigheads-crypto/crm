@@ -207,6 +207,18 @@ export interface Hosting {
 export type HostingInsert = Omit<Hosting, 'id' | 'created_at'>
 export type HostingUpdate = Partial<HostingInsert>
 
+// Problemy maszyn (powtarzające się, bez rozwiązania)
+export interface MachineIssue {
+  id: number
+  created_at: string
+  model: string | null
+  year: number | null
+  problem: string | null
+}
+
+export type MachineIssueInsert = Omit<MachineIssue, 'id' | 'created_at'>
+export type MachineIssueUpdate = Partial<MachineIssueInsert>
+
 // Support Backlog — główna sprawa klienta
 export interface SupportBacklog {
   id: number

@@ -21,6 +21,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   'support-text-log': 'SMS Support',
   candidates: 'Kandydaci',
   machines: 'Maszyny',
+  'machine-issues': 'Problemy maszyn',
   users: 'Użytkownicy',
   permissions: 'Uprawnienia zakładek',
   'activity-log': 'Logi aktywności',
