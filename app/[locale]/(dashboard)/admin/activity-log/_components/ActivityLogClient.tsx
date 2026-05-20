@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Pagination } from '@/components/shared/Pagination'
 import { Modal } from '@/components/shared/Modal'
+import { PageHeader } from '@/components/shared/PageHeader'
 import type { ActivityChange } from '@/lib/activity-log'
 
 interface ActivityLog {
@@ -177,10 +178,7 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Logi aktywności</h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Historia działań użytkowników w systemie</p>
-      </div>
+      <PageHeader title="Logi aktywności" subtitle="Historia działań użytkowników w systemie" />
 
       {/* Filter tabs */}
       <div className="flex gap-1 mb-4 p-1 rounded-lg w-fit" style={{ backgroundColor: 'var(--surface)' }}>

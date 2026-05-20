@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { UserPlus, RefreshCw } from 'lucide-react'
 import type { Role } from '@/lib/supabase/types'
 
@@ -38,18 +40,6 @@ function RoleBadge({ role }: { role: Role }) {
     </span>
   )
 }
-
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      {children}
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
-    </div>
-  )
-}
-
-const inputStyle = { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', width: '100%', outline: 'none' }
 
 const COLUMNS: Column<UserRow>[] = [
   { key: 'email', header: 'Email' },
@@ -140,20 +130,20 @@ export function AdminUsersClient() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Zarządzanie użytkownikami</h2>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Tylko administrator</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={fetchUsers} className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>
-            <RefreshCw size={13} /> Odśwież
-          </button>
-          <button onClick={() => { reset(); setCreateOpen(true) }} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
-            <UserPlus size={13} /> Nowy użytkownik
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Zarządzanie użytkownikami"
+        subtitle="Tylko administrator"
+        actions={
+          <>
+            <button onClick={fetchUsers} className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>
+              <RefreshCw size={13} /> Odśwież
+            </button>
+            <button onClick={() => { reset(); setCreateOpen(true) }} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
+              <UserPlus size={13} /> Nowy użytkownik
+            </button>
+          </>
+        }
+      />
 
       {error && (
         <div className="mb-4 rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--danger)' }}>
@@ -183,12 +173,12 @@ export function AdminUsersClient() {
             </select>
           </FormField>
           {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
-          <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => setCreateOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
-              {isSubmitting ? 'Tworzenie...' : 'Utwórz'}
-            </button>
-          </div>
+          <FormActions
+            onCancel={() => setCreateOpen(false)}
+            isSubmitting={isSubmitting}
+            submitLabel="Utwórz"
+            submittingLabel="Tworzenie..."
+          />
         </form>
       </Modal>
 

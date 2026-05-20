@@ -7,6 +7,9 @@ import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
+import { DueDateBadge, DaysLeftBadge, getDiffDays } from '@/components/shared/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { Domain, Role } from '@/lib/supabase/types'
@@ -19,74 +22,6 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const PAGE_SIZE = 25
-
-function getDiffDays(due: string) {
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  const date = new Date(due)
-  date.setHours(0, 0, 0, 0)
-  return Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-}
-
-function DueDateBadge({ value }: { value: string | null }) {
-  if (!value) return <span style={{ color: 'var(--text-dim)' }}>—</span>
-  const date = new Date(value)
-  const diff = getDiffDays(value)
-  const color = diff < 0 ? '#e8384f' : diff < 30 ? '#e8a800' : '#10a872'
-  return (
-    <span suppressHydrationWarning style={{ color, fontWeight: 500 }}>
-      {date.toLocaleDateString('pl-PL')}
-    </span>
-  )
-}
-
-function DaysLeftBadge({ days }: { days: number | null }) {
-  if (days == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>
-  const expired = days < 0
-  const soon = days >= 0 && days < 30
-  const color = expired ? '#e8384f' : soon ? '#e8a800' : '#10a872'
-  const label = expired
-    ? `${Math.abs(days)} dni temu`
-    : days === 0
-    ? 'Dziś!'
-    : `${days} dni`
-  return (
-    <span suppressHydrationWarning style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      padding: '2px 9px',
-      borderRadius: '999px',
-      fontSize: '12px',
-      fontWeight: 600,
-      backgroundColor: `${color}22`,
-      color,
-      border: `1px solid ${color}44`,
-    }}>
-      {label}
-    </span>
-  )
-}
-
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      {children}
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
-    </div>
-  )
-}
-
-const inputStyle = {
-  backgroundColor: 'var(--surface)',
-  border: '1px solid var(--border)',
-  color: 'var(--text)',
-  borderRadius: '8px',
-  padding: '8px 12px',
-  fontSize: '14px',
-  width: '100%',
-  outline: 'none',
-}
 
 interface Props { initialData: Domain[]; initialCount: number; role: Role }
 
@@ -198,12 +133,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Domeny</h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          Zarządzanie domenami internetowymi
-        </p>
-      </div>
+      <PageHeader title="Domeny" subtitle="Zarządzanie domenami internetowymi" />
       <DataTable
         data={data.map(r => ({ ...r, days_left: r.due_date ? getDiffDays(r.due_date) : null })) as unknown as Record<string, unknown>[]}
         columns={columns as unknown as Column<Record<string, unknown>>[]}
@@ -236,14 +166,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
             <input {...register('due_date')} type="date" style={inputStyle} />
           </FormField>
           {formError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
-          <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>
-              Anuluj
-            </button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
-              {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
-            </button>
-          </div>
+          <FormActions onCancel={() => setModalOpen(false)} isSubmitting={isSubmitting} />
         </form>
       </Modal>
       <ConfirmDialog

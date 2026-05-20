@@ -4,19 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
+import { DirectionBadge } from '@/components/shared/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import type { SupportTextLog, Role } from '@/lib/supabase/types'
 
 const PAGE_SIZE = 25
-
-function DirectionBadge({ dir }: { dir: string }) {
-  const isIn = dir === 'inbound' || dir === 'in'
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: isIn ? 'rgba(34,197,94,0.15)' : 'rgba(239,127,26,0.15)', color: isIn ? '#22c55e' : '#e07818' }}>
-      {isIn ? '↓ IN' : '↑ OUT'}
-    </span>
-  )
-}
 
 const COLUMNS: Column<SupportTextLog>[] = [
   { key: 'phone', header: 'Telefon' },
@@ -71,10 +63,7 @@ export function SupportTextLogClient({ initialData, initialCount, role }: Props)
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>SMS Support</h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Log wiadomości tekstowych supportu</p>
-      </div>
+      <PageHeader title="SMS Support" subtitle="Log wiadomości tekstowych supportu" />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
         columns={columnsWithExpand as unknown as Column<Record<string, unknown>>[]}

@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
@@ -47,18 +49,6 @@ const COLUMNS: Column<OLXCandidate>[] = [
       : <span style={{ color: 'var(--text-dim)' }}>—</span>
   },
 ]
-
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      {children}
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
-    </div>
-  )
-}
-
-const inputStyle = { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', width: '100%', outline: 'none' }
 
 interface Props { initialData: OLXCandidate[]; initialCount: number; role: Role }
 
@@ -133,10 +123,7 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Kandydaci OLX</h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Baza kandydatów z portalu OLX</p>
-      </div>
+      <PageHeader title="Kandydaci OLX" subtitle="Baza kandydatów z portalu OLX" />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
         columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
@@ -164,10 +151,7 @@ export function CandidatesClient({ initialData, initialCount, role }: Props) {
           <div className="col-span-2"><FormField label="URL CV"><input {...register('cv_url')} style={inputStyle} placeholder="https://..." /></FormField></div>
           <div className="col-span-2"><FormField label="Opis"><textarea {...register('description')} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} /></FormField></div>
           {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
-          <div className="col-span-2 flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{isSubmitting ? 'Zapisywanie...' : 'Zapisz'}</button>
-          </div>
+          <FormActions onCancel={() => setModalOpen(false)} isSubmitting={isSubmitting} className="col-span-2" />
         </form>
       </Modal>
       <ConfirmDialog open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={onDelete} loading={deleteLoading} title="Usuń kandydata" description={`Usuń kandydata "${deleteRow?.name}"?`} />

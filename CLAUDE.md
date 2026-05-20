@@ -30,7 +30,41 @@ lib/supabase/
 components/shared/
   DataTable.tsx               → główna tabela z sortowaniem, filtrami per-kolumna, resize
   Modal.tsx, ConfirmDialog.tsx, Pagination.tsx
+  ThemeProvider.tsx           → init motywu z localStorage przy starcie
+  forms.tsx                   → inputStyle, textareaStyle, FormField, FormActions
+  Badge.tsx                   → DueDateBadge, DaysLeftBadge, StatusBadge, DirectionBadge, getDiffDays
+  PageHeader.tsx              → wspólny nagłówek strony (title + subtitle + actions)
 ```
+
+## Biblioteka shared — komponenty wielokrotnego użytku (v2.5)
+
+Po refaktorze (sesja 2026-05) zduplikowane wzorce zostały wyciągnięte do `components/shared/`. Wszystkie moduły konsumują te komponenty zamiast duplikować kod lokalnie.
+
+### `forms.tsx`
+- **`inputStyle`** / **`textareaStyle`** — wspólne style inline dla `<input>` / `<textarea>` / `<select>` (tło `--surface`, border `--border`, kolor `--text`, padding, rounded)
+- **`FormField`** — opakowanie etykieta + child input + komunikat błędu. Props: `label`, `error?`, `children`
+- **`FormActions`** — przyciski Anuluj/Zapisz w stopce modala. Props: `onCancel`, `isSubmitting?`, `cancelLabel?`, `submitLabel?`, `submittingLabel?`, `className?` (do nadania `col-span-2` w siatkach 2-kolumnowych)
+
+Używane przez: candidates, sales, sales-deals, sales-quality, support-cases, machines, machine-issues, domains, hostings, reviews, admin/users, support-backlog.
+
+> Settings ma własny lokalny `FormField` z innym API (value/onChange/type/placeholder + bg `--surface-2`) — **świadomie nie używa** shared/forms.
+
+### `Badge.tsx`
+- **`getDiffDays(dateStr)`** — wylicza liczbę dni do podanej daty (do `DaysLeftBadge` / `DueDateBadge`)
+- **`DueDateBadge`** — pokazuje datę z kolorowym tłem wg progów: zielony >30 dni, żółty ≤30, czerwony ≤7 / po terminie. `suppressHydrationWarning` w środku
+- **`DaysLeftBadge`** — pokazuje samą liczbę pozostałych dni z tym samym schematem kolorów
+- **`StatusBadge`** — generyczny badge statusu. Props: `status: string`, `colors: Record<string, string>` (mapa kolorów lokalna w komponencie)
+- **`DirectionBadge`** — IN/OUT badge dla logów tekstowych (sales-text-log, support-text-log)
+
+> `DueDateBadge` / `DaysLeftBadge` używane w domains + hostings. `StatusBadge` zastąpił 4 lokalne implementacje (sales, sales-deals, support-cases, support-backlog) — każdy moduł podaje swoją mapę `STATUS_COLORS`.
+
+### `PageHeader.tsx`
+- Jednolity nagłówek strony — tytuł + opcjonalny `subtitle` + opcjonalne `actions` po prawej
+- Props: `title: string`, `subtitle?: ReactNode`, `actions?: ReactNode`, `className?: string`
+- Domyślny wrapper: `mb-6` (lub `mb-6 flex items-start justify-between gap-4` gdy są `actions`)
+- `className=""` używane w dashboard/page.tsx (parent `flex flex-col gap-6` daje już odstęp przez `gap`)
+
+Używane przez wszystkie moduły dashboardu (15 stron). `admin/users` i `support-backlog` używają `actions` prop dla przycisków „Odśwież / Nowy użytkownik" i „Aktualizacja / Nowa sprawa".
 
 ## Routing i auth (proxy.ts)
 - Plik `proxy.ts` (nie `middleware.ts`) pełni rolę middleware — konwencja Next.js 16
@@ -238,7 +272,6 @@ Działa automatycznie na wszystkich polach — nie dodawaj `:focus` inline.
 Priorytety na następną sesję:
 
 **🔴 Krytyczne — jeszcze nierozwiązane:**
-- **Punkt 3** — Niezgodność skali w formularzu kandydatów: etykiety mówią `(0-10)` ale `ScoreBadge` koloruje wg progów `/100`. Plik: `app/[locale]/(dashboard)/candidates/_components/CandidatesClient.tsx:150-153`
 - **Punkt 4** — Brak walidacji wejścia, mass assignment, race condition i wyciek błędów w `app/api/admin/users/route.ts`
 - **Punkt 5** — Brak obsługi błędów po CRUD (insert/update/delete) — 16 miejsc bez sprawdzenia `{ error }` w `*Client.tsx`
 

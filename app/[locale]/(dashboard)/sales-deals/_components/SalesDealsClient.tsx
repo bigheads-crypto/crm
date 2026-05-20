@@ -7,6 +7,9 @@ import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
@@ -26,34 +29,10 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'closed']
+const STATUS_COLORS: Record<string, string> = {
+  open: '#22c55e', pending: '#f59e0b', in_progress: '#e07818', closed: '#6b7280',
+}
 const PAGE_SIZE = 25
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    open: '#22c55e', pending: '#f59e0b', in_progress: '#e07818', closed: '#6b7280',
-  }
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: `${colors[status] ?? '#6b7280'}1a`, color: colors[status] ?? '#6b7280' }}>
-      {status}
-    </span>
-  )
-}
-
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      {children}
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
-    </div>
-  )
-}
-
-const inputStyle = {
-  backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
-  color: 'var(--text)', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', width: '100%', outline: 'none',
-}
 
 interface Props {
   initialData: SalesDeal[]
@@ -100,7 +79,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     { key: 'client_name', header: 'Klient' },
     { key: 'phone', header: 'Telefon' },
     { key: 'salesman', header: 'Handlowiec', filterOptions: filterOptionsMap.salesman },
-    { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} /> : '—', filterOptions: STATUS_OPTIONS },
+    { key: 'status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} colors={STATUS_COLORS} /> : '—', filterOptions: STATUS_OPTIONS },
     { key: 'category', header: 'Kategoria', filterOptions: filterOptionsMap.category },
     { key: 'detected_engine', header: 'Silnik', filterOptions: filterOptionsMap.detected_engine },
     { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
@@ -160,10 +139,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Transakcje sprzedażowe</h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Zarządzanie transakcjami sprzedażowymi</p>
-      </div>
+      <PageHeader title="Transakcje sprzedażowe" subtitle="Zarządzanie transakcjami sprzedażowymi" />
 
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
@@ -224,12 +200,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
             </FormField>
           </div>
           {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
-          <div className="col-span-2 flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
-              {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
-            </button>
-          </div>
+          <FormActions onCancel={() => setModalOpen(false)} isSubmitting={isSubmitting} className="col-span-2" />
         </form>
       </Modal>
 

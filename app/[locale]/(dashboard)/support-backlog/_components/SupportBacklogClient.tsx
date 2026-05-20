@@ -7,6 +7,9 @@ import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
+import { StatusBadge } from '@/components/shared/Badge'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity } from '@/lib/activity-log'
@@ -40,39 +43,6 @@ const STATUS_COLORS: Record<string, string> = {
   in_progress: '#e07818',
   resolved: '#22c55e',
   closed: '#6b7280',
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const color = STATUS_COLORS[status] ?? '#6b7280'
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: `${color}1a`, color }}
-    >
-      {status}
-    </span>
-  )
-}
-
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      {children}
-      {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
-    </div>
-  )
-}
-
-const inputStyle = {
-  backgroundColor: 'var(--surface)',
-  border: '1px solid var(--border)',
-  color: 'var(--text)',
-  borderRadius: '8px',
-  padding: '8px 12px',
-  fontSize: '14px',
-  width: '100%',
-  outline: 'none',
 }
 
 const taStyle = { ...inputStyle, minHeight: '72px', resize: 'vertical' as const }
@@ -177,7 +147,7 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
     { key: 'invoice_number', header: 'Nr faktury', sortable: true, filterable: true },
     {
       key: 'status', header: 'Status', sortable: true,
-      render: (v) => v ? <StatusBadge status={String(v)} /> : <StatusBadge status="open" />,
+      render: (v) => v ? <StatusBadge status={String(v)} colors={STATUS_COLORS} /> : <StatusBadge status="open" colors={STATUS_COLORS} />,
       filterOptions: STATUS_OPTIONS,
     },
     { key: 'agent', header: 'Technik', sortable: true, filterOptions: filterOptionsMap.agent },
@@ -347,30 +317,28 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
 
   return (
     <>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Support Backlog</h2>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Historia interakcji i śledzenie rozwiązań
-          </p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <button
-            onClick={() => { setQuickUpdateOpen(true); setQuickSearch(''); setQuickResults([]); setQuickSearched(false) }}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-            style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          >
-            <RefreshCw size={14} /> Aktualizacja
-          </button>
-          <button
-            onClick={() => { caseForm.reset({}); setCaseFormError(null); setAddCaseOpen(true) }}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
-            style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
-          >
-            <Plus size={14} /> Nowa sprawa
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Support Backlog"
+        subtitle="Historia interakcji i śledzenie rozwiązań"
+        actions={
+          <>
+            <button
+              onClick={() => { setQuickUpdateOpen(true); setQuickSearch(''); setQuickResults([]); setQuickSearched(false) }}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+              style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            >
+              <RefreshCw size={14} /> Aktualizacja
+            </button>
+            <button
+              onClick={() => { caseForm.reset({}); setCaseFormError(null); setAddCaseOpen(true) }}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
+              style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+            >
+              <Plus size={14} /> Nowa sprawa
+            </button>
+          </>
+        }
+      />
 
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
@@ -459,7 +427,7 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
                           <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
                             {row.client_name ?? '—'}
                           </span>
-                          <StatusBadge status={row.status} />
+                          <StatusBadge status={row.status} colors={STATUS_COLORS} />
                         </div>
                         <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-dim)' }}>
                           #{row.id}
@@ -520,14 +488,12 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
           {caseFormError && (
             <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{caseFormError}</p>
           )}
-          <div className="col-span-2 flex justify-end gap-2 mt-1">
-            <button type="button" onClick={() => setAddCaseOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>
-              Anuluj
-            </button>
-            <button type="submit" disabled={caseForm.formState.isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
-              {caseForm.formState.isSubmitting ? 'Zapisywanie...' : 'Utwórz sprawę'}
-            </button>
-          </div>
+          <FormActions
+            onCancel={() => setAddCaseOpen(false)}
+            isSubmitting={caseForm.formState.isSubmitting}
+            submitLabel="Utwórz sprawę"
+            className="col-span-2"
+          />
         </form>
       </Modal>
 
@@ -596,7 +562,7 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
                   <InfoPill label="Technik" value={selectedCase.agent} />
                   <div className="flex items-center gap-2">
                     <span style={{ color: 'var(--text-muted)', fontSize: '12px', minWidth: '80px' }}>Status</span>
-                    <StatusBadge status={selectedCase.status} />
+                    <StatusBadge status={selectedCase.status} colors={STATUS_COLORS} />
                   </div>
                   <InfoPill
                     label="Ostatnia aktywność"
@@ -643,14 +609,11 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
                     <textarea {...logForm.register('notes')} style={{ ...taStyle, minHeight: '52px' }} placeholder="Dodatkowe uwagi..." />
                   </FormField>
                   {logFormError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{logFormError}</p>}
-                  <div className="flex justify-end gap-2">
-                    <button type="button" onClick={() => setAddLogOpen(false)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>
-                      Anuluj
-                    </button>
-                    <button type="submit" disabled={logForm.formState.isSubmitting} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
-                      {logForm.formState.isSubmitting ? 'Zapisywanie...' : 'Zapisz wpis'}
-                    </button>
-                  </div>
+                  <FormActions
+                    onCancel={() => setAddLogOpen(false)}
+                    isSubmitting={logForm.formState.isSubmitting}
+                    submitLabel="Zapisz wpis"
+                  />
                 </form>
               )}
             </div>

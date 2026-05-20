@@ -5,6 +5,7 @@ import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
+import { PageHeader } from '@/components/shared/PageHeader'
 import type { SupportLog, Role } from '@/lib/supabase/types'
 
 const PAGE_SIZE = 25
@@ -73,10 +74,7 @@ export function SupportLogClient({ initialData, initialCount, role }: Props) {
 
   return (
     <>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Log supportu</h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Historia rozmów supportu (tylko odczyt)</p>
-      </div>
+      <PageHeader title="Log supportu" subtitle="Historia rozmów supportu (tylko odczyt)" />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
         columns={columnsWithDetail as unknown as Column<Record<string, unknown>>[]}

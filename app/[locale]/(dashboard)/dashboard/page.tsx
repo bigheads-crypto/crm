@@ -3,6 +3,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { DashboardCharts } from './_components/DashboardCharts'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   Handshake,
   HeadphonesIcon,
@@ -192,15 +193,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Tytuł */}
-      <div>
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
-          Dashboard
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          Przegląd aktywności CRM 4DPF
-        </p>
-      </div>
+      <PageHeader title="Dashboard" subtitle="Przegląd aktywności CRM 4DPF" className="" />
 
       {/* Karty KPI */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
