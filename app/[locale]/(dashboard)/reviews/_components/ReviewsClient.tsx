@@ -62,9 +62,11 @@ interface Props {
   initialCount: number
   role: Role
   userName: string
+  canWrite: boolean
+  canEdit: boolean
 }
 
-export function ReviewsClient({ initialData, initialCount, role, userName }: Props) {
+export function ReviewsClient({ initialData, initialCount, role, userName, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -80,8 +82,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
-  const canEdit = ['admin', 'support', 'manager'].includes(role)
-  const canDelete = role === 'admin'
+  const canDelete = canEdit
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -183,7 +184,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName }: Pro
         data={data as unknown as Record<string, unknown>[]}
         columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as Review) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Review) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj opinię"

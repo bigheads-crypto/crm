@@ -2,6 +2,30 @@ import { createClient } from '@/lib/supabase/server'
 import type { Role } from '@/lib/supabase/types'
 import { TAB_DEFS, DEFAULT_VIEW_MAP, getDefaultPerms } from '@/lib/permissions-config'
 
+export async function getTabWritePerms(role: Role, tabKey: string): Promise<{ canWrite: boolean; canEdit: boolean }> {
+  if (role === 'admin') return { canWrite: true, canEdit: true }
+
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('tab_permissions')
+      .select('can_write, can_edit')
+      .eq('role', role)
+      .eq('tab_key', tabKey)
+      .maybeSingle()
+
+    if (error || !data) {
+      const defaults = getDefaultPerms(tabKey, role)
+      return { canWrite: defaults.canWrite, canEdit: defaults.canEdit }
+    }
+
+    return { canWrite: data.can_write, canEdit: data.can_edit }
+  } catch {
+    const defaults = getDefaultPerms(tabKey, role)
+    return { canWrite: defaults.canWrite, canEdit: defaults.canEdit }
+  }
+}
+
 export async function getAllowedTabs(role: Role): Promise<string[]> {
   if (role === 'admin') {
     return Object.keys(DEFAULT_VIEW_MAP)

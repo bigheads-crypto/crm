@@ -29,9 +29,9 @@ const COLUMNS: Column<MachineIssue>[] = [
   { key: 'problem', header: 'Problem', sortable: false, filterable: true },
 ]
 
-interface Props { initialData: MachineIssue[]; initialCount: number; role: Role }
+interface Props { initialData: MachineIssue[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
 
-export function MachineIssuesClient({ initialData, initialCount, role }: Props) {
+export function MachineIssuesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -47,8 +47,7 @@ export function MachineIssuesClient({ initialData, initialCount, role }: Props) 
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
-  const canEdit = ['admin', 'handlowiec', 'support', 'manager'].includes(role)
-  const canDelete = role === 'admin'
+  const canDelete = canEdit
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
@@ -103,7 +102,7 @@ export function MachineIssuesClient({ initialData, initialCount, role }: Props) 
         data={data as unknown as Record<string, unknown>[]}
         columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as MachineIssue) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as MachineIssue) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj problem"

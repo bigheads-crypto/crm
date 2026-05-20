@@ -23,9 +23,9 @@ type FormData = z.infer<typeof schema>
 
 const PAGE_SIZE = 25
 
-interface Props { initialData: Domain[]; initialCount: number; role: Role }
+interface Props { initialData: Domain[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
 
-export function DomainsClient({ initialData, initialCount, role }: Props) {
+export function DomainsClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -42,8 +42,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
-  const canEdit = ['admin', 'manager'].includes(role)
-  const canDelete = role === 'admin'
+  const canDelete = canEdit
 
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
@@ -141,7 +140,7 @@ export function DomainsClient({ initialData, initialCount, role }: Props) {
         page={page}
         onPageChange={setPage}
         pageSize={PAGE_SIZE}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as Domain) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Domain) : undefined}
         loading={loading}

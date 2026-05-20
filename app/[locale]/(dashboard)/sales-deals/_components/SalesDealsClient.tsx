@@ -38,9 +38,11 @@ interface Props {
   initialData: SalesDeal[]
   initialCount: number
   role: Role
+  canWrite: boolean
+  canEdit: boolean
 }
 
-export function SalesDealsClient({ initialData, initialCount, role }: Props) {
+export function SalesDealsClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -85,8 +87,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
     { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
   ], [filterOptionsMap])
 
-  const canEdit = ['admin', 'handlowiec'].includes(role)
-  const canDelete = role === 'admin'
+  const canDelete = canEdit
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
@@ -151,7 +152,7 @@ export function SalesDealsClient({ initialData, initialCount, role }: Props) {
         filterTabs={filterTabs}
         activeFilter={filter}
         onFilterChange={(v) => { setFilter(v); setPage(1) }}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as SalesDeal) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as SalesDeal) : undefined}
         loading={loading}

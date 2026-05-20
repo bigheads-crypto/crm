@@ -32,9 +32,9 @@ const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'resolved', 'closed']
 const STATUS_COLORS: Record<string, string> = { open: '#ef4444', pending: '#f59e0b', in_progress: '#e07818', resolved: '#22c55e', closed: '#6b7280' }
 const PAGE_SIZE = 25
 
-interface Props { initialData: SupportCase[]; initialCount: number; role: Role }
+interface Props { initialData: SupportCase[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
 
-export function SupportCasesClient({ initialData, initialCount, role }: Props) {
+export function SupportCasesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -79,8 +79,7 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
     { key: 'last_contact_at', header: 'Ostatni kontakt', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
   ], [filterOptionsMap])
 
-  const canEdit = ['admin', 'support'].includes(role)
-  const canDelete = role === 'admin'
+  const canDelete = canEdit
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
@@ -134,7 +133,7 @@ export function SupportCasesClient({ initialData, initialCount, role }: Props) {
         columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as SupportCase) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as SupportCase) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj sprawę"

@@ -51,6 +51,8 @@ interface Props {
   initialData: SupportBacklog[]
   initialCount: number
   role: Role
+  canWrite: boolean
+  canEdit: boolean
 }
 
 interface LinkedClient {
@@ -58,7 +60,7 @@ interface LinkedClient {
   salesman: string | null
 }
 
-export function SupportBacklogClient({ initialData, initialCount, role }: Props) {
+export function SupportBacklogClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
   // Lista
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
@@ -329,13 +331,15 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
             >
               <RefreshCw size={14} /> Aktualizacja
             </button>
-            <button
-              onClick={() => { caseForm.reset({}); setCaseFormError(null); setAddCaseOpen(true) }}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
-              style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
-            >
-              <Plus size={14} /> Nowa sprawa
-            </button>
+            {canWrite && (
+              <button
+                onClick={() => { caseForm.reset({}); setCaseFormError(null); setAddCaseOpen(true) }}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
+                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+              >
+                <Plus size={14} /> Nowa sprawa
+              </button>
+            )}
           </>
         }
       />
@@ -353,8 +357,8 @@ export function SupportBacklogClient({ initialData, initialCount, role }: Props)
         onEdit={(row) => openDetail(row as unknown as SupportBacklog)}
         onDelete={(row) => setDeleteRow(row as unknown as SupportBacklog)}
         loading={loading}
-        canEdit
-        canDelete={role === 'admin'}
+        canEdit={canEdit}
+        canDelete={canEdit}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}

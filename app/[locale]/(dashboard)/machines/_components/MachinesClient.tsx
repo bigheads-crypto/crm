@@ -53,9 +53,9 @@ const COLUMNS: Column<Machine>[] = [
   { key: 'return_status', header: 'Status zwrotu' },
 ]
 
-interface Props { initialData: Machine[]; initialCount: number; role: Role }
+interface Props { initialData: Machine[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
 
-export function MachinesClient({ initialData, initialCount, role }: Props) {
+export function MachinesClient({ initialData, initialCount, role, canWrite, canEdit: canEditProp }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -71,9 +71,8 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
-  // Logistyka tylko odczyt
-  const canEdit = ['admin', 'handlowiec'].includes(role)
-  const canDelete = role === 'admin'
+  const canEdit = canEditProp
+  const canDelete = canEditProp
 
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
@@ -124,7 +123,7 @@ export function MachinesClient({ initialData, initialCount, role }: Props) {
         data={data as unknown as Record<string, unknown>[]}
         columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as Machine) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Machine) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj maszynę"

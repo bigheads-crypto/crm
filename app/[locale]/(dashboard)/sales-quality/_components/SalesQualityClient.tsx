@@ -40,9 +40,9 @@ function RatingBadge({ rating }: { rating: number }) {
   )
 }
 
-interface Props { initialData: SalesQuality[]; initialCount: number; role: Role }
+interface Props { initialData: SalesQuality[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
 
-export function SalesQualityClient({ initialData, initialCount, role }: Props) {
+export function SalesQualityClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -87,8 +87,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
     { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
   ], [filterOptionsMap])
 
-  const canEdit = ['admin', 'handlowiec'].includes(role)
-  const canDelete = role === 'admin'
+  const canDelete = canEdit
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
@@ -141,7 +140,7 @@ export function SalesQualityClient({ initialData, initialCount, role }: Props) {
         data={data as unknown as Record<string, unknown>[]}
         columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
-        onAdd={canEdit ? openAdd : undefined}
+        onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as SalesQuality) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as SalesQuality) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj ocenę"

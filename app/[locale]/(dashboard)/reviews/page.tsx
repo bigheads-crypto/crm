@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth/helpers'
 import { ReviewsClient } from './_components/ReviewsClient'
+import { getTabWritePerms } from '@/lib/permissions'
 import type { Role } from '@/lib/supabase/types'
 
 export default async function ReviewsPage() {
@@ -8,11 +9,10 @@ export default async function ReviewsPage() {
   const role = profile.role as Role
   const supabase = await createClient()
 
-  const { data, count } = await supabase
-    .from('Opinie')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(0, 24)
+  const [{ data, count }, { canWrite, canEdit }] = await Promise.all([
+    supabase.from('Opinie').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(0, 24),
+    getTabWritePerms(role, 'reviews'),
+  ])
 
   return (
     <ReviewsClient
@@ -20,6 +20,8 @@ export default async function ReviewsPage() {
       initialCount={count ?? 0}
       role={role}
       userName={profile.full_name ?? ''}
+      canWrite={canWrite}
+      canEdit={canEdit}
     />
   )
 }

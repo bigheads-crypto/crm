@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth/helpers'
 import { MachinesClient } from './_components/MachinesClient'
+import { getTabWritePerms } from '@/lib/permissions'
 import type { Role } from '@/lib/supabase/types'
 
 export default async function MachinesPage() {
@@ -8,11 +9,10 @@ export default async function MachinesPage() {
   const role = profile.role as Role
   const supabase = await createClient()
 
-  const { data, count } = await supabase
-    .from('Machines')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(0, 24)
+  const [{ data, count }, { canWrite, canEdit }] = await Promise.all([
+    supabase.from('Machines').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(0, 24),
+    getTabWritePerms(role, 'machines'),
+  ])
 
-  return <MachinesClient initialData={data ?? []} initialCount={count ?? 0} role={role} />
+  return <MachinesClient initialData={data ?? []} initialCount={count ?? 0} role={role} canWrite={canWrite} canEdit={canEdit} />
 }
