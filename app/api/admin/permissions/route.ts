@@ -34,6 +34,10 @@ export async function GET() {
 
     const result: Record<string, Record<string, { canView: boolean; canWrite: boolean; canEdit: boolean }>> = {}
 
+    // Niestandardowe role znalezione w DB
+    const allDbRoles = [...new Set((dbPerms ?? []).map((p: { role: string }) => p.role))]
+    const customRoles = allDbRoles.filter((r) => !ALL_ROLES.includes(r as never))
+
     for (const tab of TAB_DEFS) {
       result[tab.key] = {}
       for (const role of ALL_ROLES) {
@@ -48,16 +52,24 @@ export async function GET() {
           ? { canView: dbEntry.can_view, canWrite: dbEntry.can_write, canEdit: dbEntry.can_edit }
           : getDefaultPerms(tab.key, role)
       }
+      for (const role of customRoles) {
+        const dbEntry = (dbPerms ?? []).find(
+          (p: { role: string; tab_key: string }) => p.role === role && p.tab_key === tab.key
+        )
+        result[tab.key][role] = dbEntry
+          ? { canView: dbEntry.can_view, canWrite: dbEntry.can_write, canEdit: dbEntry.can_edit }
+          : { canView: false, canWrite: false, canEdit: false }
+      }
     }
 
-    return NextResponse.json({ permissions: result })
+    return NextResponse.json({ permissions: result, customRoles })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message ?? 'Błąd serwera' }, { status: 500 })
   }
 }
 
 const upsertSchema = z.object({
-  role: z.enum(['manager', 'handlowiec', 'support', 'hr', 'logistyka']),
+  role: z.string().min(1).refine((r) => r !== 'admin', 'Nie można modyfikować roli admin'),
   tabKey: z.string().refine((k) => TAB_DEFS.some((t) => t.key === k), 'Nieznana zakładka'),
   permType: z.enum(['canView', 'canWrite', 'canEdit']),
   enabled: z.boolean(),
@@ -94,7 +106,7 @@ export async function POST(request: NextRequest) {
       .eq('tab_key', tabKey)
       .maybeSingle()
 
-    const defaults = getDefaultPerms(tabKey, role)
+    const defaults = getDefaultPerms(tabKey, role as import('@/lib/supabase/types').Role)
     const current = existing ?? {
       can_view: defaults.canView,
       can_write: defaults.canWrite,
