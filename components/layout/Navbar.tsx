@@ -23,6 +23,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   machines: 'Maszyny',
   'machine-issues': 'Problemy maszyn',
   'reviews': 'Opinie',
+  warehouse: 'Magazyn',
   users: 'Użytkownicy',
   permissions: 'Uprawnienia zakładek',
   'activity-log': 'Logi aktywności',

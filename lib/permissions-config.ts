@@ -36,6 +36,11 @@ export const TAB_DEFS: TabDef[] = [
   { key: 'reviews', label: 'Opinie' },
   { key: 'domains', label: 'Domeny' },
   { key: 'hostings', label: 'Hostingi' },
+  { key: 'warehouse', label: 'Emulatory (magazyn)' },
+  { key: 'warehouse-zestawy', label: 'Zestawy (magazyn)' },
+  { key: 'warehouse-wiazki', label: 'Wiązki (magazyn)' },
+  { key: 'warehouse-hardware', label: 'Hardware (magazyn)' },
+  { key: 'warehouse-software', label: 'Software (magazyn)' },
   { key: 'admin/activity-log', label: 'Logi aktywności' },
 ]
 
@@ -56,6 +61,11 @@ const DEFAULT_VIEW: Record<string, Role[]> = {
   'reviews': ['admin', 'support', 'manager'],
   'domains': ['admin', 'manager'],
   'hostings': ['admin', 'manager'],
+  'warehouse': ['admin', 'manager', 'logistyka', 'handlowiec'],
+  'warehouse-zestawy': ['admin', 'manager', 'logistyka', 'handlowiec'],
+  'warehouse-wiazki': ['admin', 'manager', 'logistyka', 'handlowiec'],
+  'warehouse-hardware': ['admin', 'manager', 'logistyka'],
+  'warehouse-software': ['admin', 'manager', 'logistyka', 'handlowiec'],
   'admin/users': ['admin'],
   'admin/permissions': ['admin'],
   'admin/activity-log': ['admin', 'manager'],

@@ -17,7 +17,13 @@
     "hostings": "Hostings",
     "adminUsers": "Users",
     "adminPermissions": "Tab Permissions",
-    "activityLog": "Activity Log"
+    "activityLog": "Activity Log",
+    "warehouse": "Warehouse",
+    "warehouseEmulatory": "Emulators",
+    "warehouseZestawy": "Sets",
+    "warehouseWiazki": "Harnesses",
+    "warehouseHardware": "Hardware",
+    "warehouseSoftware": "Software"
   },
   "auth": {
     "title": "Sign in to CRM",

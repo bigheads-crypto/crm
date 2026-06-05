@@ -164,20 +164,104 @@ export interface SalesTextLog {
 export type SalesTextLogInsert = Omit<SalesTextLog, 'id' | 'created_at'>
 export type SalesTextLogUpdate = Partial<SalesTextLogInsert>
 
+// Katalog produktów / Magazyn
+export interface Product {
+  id: number
+  created_at: string
+  name: string
+  category: string | null
+  stock_qty: number
+  price_default: number | null
+  notes: string | null
+  plytka: string | null
+  program: string | null
+}
+
+export type ProductInsert = Omit<Product, 'id' | 'created_at'>
+export type ProductUpdate = Partial<ProductInsert>
+
+// Zestawy (konfiguracje emulatorów + wiązek)
+export interface Zestaw {
+  id: number
+  created_at: string
+  nr: number
+  name: string
+  emulator_program: string | null
+  wiazka: string | null
+  notes: string | null
+  instrukcja: string | null
+}
+
+export type ZestawInsert = Omit<Zestaw, 'id' | 'created_at'>
+export type ZestawUpdate = Partial<ZestawInsert>
+
+// Katalog oprogramowania (firmware emulatorów)
+export interface Software {
+  id: number
+  created_at: string
+  product_line: string
+  name: string
+  plytka: string | null
+  notes: string | null
+}
+
+export type SoftwareInsert = Omit<Software, 'id' | 'created_at'>
+export type SoftwareUpdate = Partial<SoftwareInsert>
+
+// Hardware — płytki i obudowy
+export interface Hardware {
+  id: number
+  created_at: string
+  component_type: string
+  name: string
+  stock_qty: number
+  notes: string | null
+}
+
+export type HardwareInsert = Omit<Hardware, 'id' | 'created_at'>
+export type HardwareUpdate = Partial<HardwareInsert>
+
+// Wiązki (harnessy)
+export interface Wiazka {
+  id: number
+  created_at: string
+  product_line: string
+  emulator: string | null
+  name: string
+  stock_qty: number
+  notes: string | null
+}
+
+export type WiazkaInsert = Omit<Wiazka, 'id' | 'created_at'>
+export type WiazkaUpdate = Partial<WiazkaInsert>
+
 // Sprzedaż (zamówienia)
 export interface Sale {
   id: number
   created_at: string
-  salesman: string | null
-  email_address: string | null
   phone: string | null
+  client_name: string | null
+  company: string | null
+  email_address: string | null
+  location: string | null
+  vat_no: string | null
+  salesman: string | null
+  first_contact: string | null
   sale_status: string | null
+  machine_id: number | null
+  pipe_type: string | null
+  quantity: number | null
+  price: number | null
+  shipping_cost: number | null
+  total: number | null
+  payment_method: string | null
+  paypal_invoice_number: string | null
+  tracking_number: string | null
   shipping_details: string | null
   invoice_details: string | null
-  tracking_number: string | null
-  paypal_invoice_number: string | null
-  company: string | null
-  machine_id: number | null
+  deal_id: number | null
+  product_id: number | null
+  notes: string | null
 }
 
 export type SaleInsert = Omit<Sale, 'id' | 'created_at'>

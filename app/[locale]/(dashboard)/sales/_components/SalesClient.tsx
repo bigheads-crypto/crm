@@ -13,27 +13,40 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Sale, Role } from '@/lib/supabase/types'
+import type { Sale, Product, Role } from '@/lib/supabase/types'
+
+const PAYMENT_OPTIONS = ['PayPal', 'przelew']
+const STATUS_OPTIONS = ['new', 'processing', 'shipped', 'delivered', 'cancelled']
+const STATUS_COLORS: Record<string, string> = {
+  new: '#e07818', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444',
+}
+const PAGE_SIZE = 25
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
-  salesman: z.string().optional(),
+  client_name: z.string().optional(),
+  company: z.string().optional(),
   email_address: z.string().optional(),
+  location: z.string().optional(),
+  vat_no: z.string().optional(),
+  salesman: z.string().optional(),
+  first_contact: z.string().optional(),
   sale_status: z.string().optional(),
+  product_id: z.string().optional(),
+  quantity: z.string().optional(),
+  price: z.string().optional(),
+  shipping_cost: z.string().optional(),
+  total: z.string().optional(),
+  payment_method: z.string().optional(),
+  paypal_invoice_number: z.string().optional(),
+  tracking_number: z.string().optional(),
   shipping_details: z.string().optional(),
   invoice_details: z.string().optional(),
-  tracking_number: z.string().optional(),
-  paypal_invoice_number: z.string().optional(),
-  company: z.string().optional(),
-  machine_id: z.string().optional(),
+  notes: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
 
-const STATUS_OPTIONS = ['new', 'processing', 'shipped', 'delivered', 'cancelled']
-const STATUS_COLORS: Record<string, string> = { new: '#e07818', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444' }
-const PAGE_SIZE = 25
-
-function SalesmanAutocomplete({ salesmen, value, onChange, inputStyle }: {
+function SalesmanAutocomplete({ salesmen, value, onChange, inputStyle: style }: {
   salesmen: string[]
   value: string
   onChange: (v: string) => void
@@ -55,7 +68,7 @@ function SalesmanAutocomplete({ salesmen, value, onChange, inputStyle }: {
     <div ref={containerRef} style={{ position: 'relative' }}>
       <input
         value={value}
-        style={inputStyle}
+        style={style}
         autoComplete="off"
         onFocus={() => setOpen(true)}
         onChange={(e) => { onChange(e.target.value); setOpen(true) }}
@@ -84,6 +97,18 @@ function SalesmanAutocomplete({ salesmen, value, onChange, inputStyle }: {
   )
 }
 
+function FormSection({ title }: { title: string }) {
+  return (
+    <div className="col-span-2" style={{
+      borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px',
+      fontSize: '11px', fontWeight: 600, textTransform: 'uppercase',
+      letterSpacing: '0.06em', color: 'var(--text-muted)',
+    }}>
+      {title}
+    </div>
+  )
+}
+
 interface Props { initialData: Sale[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
 
 export function SalesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
@@ -101,23 +126,53 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [salesmen, setSalesmen] = useState<string[]>([])
+  const [products, setProducts] = useState<Product[]>([])
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   useEffect(() => {
-    createClient().from('Sales').select('salesman').not('salesman', 'is', null)
-      .then(({ data: s }) => setSalesmen([...new Set((s ?? []).map(r => r.salesman).filter(Boolean) as string[])].sort()))
+    const supabase = createClient()
+    Promise.all([
+      supabase.from('Sales').select('salesman').not('salesman', 'is', null)
+        .then(({ data: s }) => setSalesmen([...new Set((s ?? []).map(r => r.salesman).filter(Boolean) as string[])].sort())),
+      supabase.from('Products').select('*').order('category').order('name')
+        .then(({ data: p }) => setProducts(p ?? [])),
+    ])
   }, [])
 
+  const productMap = useMemo(() =>
+    Object.fromEntries(products.map(p => [p.id, p])),
+    [products]
+  )
+
+  const emulators = useMemo(() => products.filter(p => p.category === 'emulator'), [products])
+  const pipes = useMemo(() => products.filter(p => p.category === 'rura'), [products])
+  const others = useMemo(() => products.filter(p => !['emulator', 'rura'].includes(p.category ?? '')), [products])
+
   const columns = useMemo<Column<Sale>[]>(() => [
-    { key: 'phone', header: 'Telefon' },
-    { key: 'salesman', header: 'Handlowiec', filterOptions: salesmen },
+    { key: 'phone', header: 'Telefon', width: '130px' },
+    { key: 'client_name', header: 'Klient' },
     { key: 'company', header: 'Firma' },
-    { key: 'sale_status', header: 'Status', render: (v) => v ? <StatusBadge status={String(v)} colors={STATUS_COLORS} /> : '—', filterOptions: STATUS_OPTIONS },
+    { key: 'salesman', header: 'Handlowiec', filterOptions: salesmen },
+    {
+      key: 'sale_status', header: 'Status', width: '120px',
+      render: (v) => v ? <StatusBadge status={String(v)} colors={STATUS_COLORS} /> : '—',
+      filterOptions: STATUS_OPTIONS,
+    },
+    {
+      key: 'product_id', header: 'Produkt', filterable: false,
+      render: (v) => v ? (productMap[Number(v)]?.name ?? `#${v}`) : '—',
+    },
+    {
+      key: 'total', header: 'Total', filterable: false, width: '90px',
+      render: (v) => v != null ? `${Number(v).toLocaleString('pl-PL')} €` : '—',
+    },
     { key: 'tracking_number', header: 'Nr śledzenia' },
-    { key: 'machine_id', header: 'ID maszyny', filterable: false },
-    { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—', filterable: false },
-  ], [salesmen])
+    {
+      key: 'created_at', header: 'Data', filterable: false, width: '100px',
+      render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—',
+    },
+  ], [salesmen, productMap])
 
   const canDelete = canEdit
 
@@ -130,7 +185,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     const timer = setTimeout(async () => {
       const { data: match } = await createClient()
         .from('Sales')
-        .select('salesman, email_address, shipping_details, invoice_details, company')
+        .select('salesman, email_address, shipping_details, invoice_details, company, client_name, location, vat_no, first_contact')
         .eq('phone', phoneWatch)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -141,6 +196,10 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         if (match.shipping_details) setValue('shipping_details', match.shipping_details)
         if (match.invoice_details) setValue('invoice_details', match.invoice_details)
         if (match.company) setValue('company', match.company)
+        if (match.client_name) setValue('client_name', match.client_name)
+        if (match.location) setValue('location', match.location)
+        if (match.vat_no) setValue('vat_no', match.vat_no)
+        if (match.first_contact) setValue('first_contact', match.first_contact)
         setAutofilled(true)
       } else {
         setAutofilled(false)
@@ -164,18 +223,60 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
 
   const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setAutofilled(false); setModalOpen(true) }
   const openEdit = (row: Sale) => {
-    reset({ phone: row.phone ?? '', salesman: row.salesman ?? '', email_address: row.email_address ?? '', sale_status: row.sale_status ?? '', shipping_details: row.shipping_details ?? '', invoice_details: row.invoice_details ?? '', tracking_number: row.tracking_number ?? '', paypal_invoice_number: row.paypal_invoice_number ?? '', company: row.company ?? '', machine_id: row.machine_id?.toString() ?? '' })
+    reset({
+      phone: row.phone ?? '',
+      client_name: row.client_name ?? '',
+      company: row.company ?? '',
+      email_address: row.email_address ?? '',
+      location: row.location ?? '',
+      vat_no: row.vat_no ?? '',
+      salesman: row.salesman ?? '',
+      first_contact: row.first_contact ?? '',
+      sale_status: row.sale_status ?? '',
+      product_id: row.product_id != null ? String(row.product_id) : '',
+      quantity: row.quantity != null ? String(row.quantity) : '',
+      price: row.price != null ? String(row.price) : '',
+      shipping_cost: row.shipping_cost != null ? String(row.shipping_cost) : '',
+      total: row.total != null ? String(row.total) : '',
+      payment_method: row.payment_method ?? '',
+      paypal_invoice_number: row.paypal_invoice_number ?? '',
+      tracking_number: row.tracking_number ?? '',
+      shipping_details: row.shipping_details ?? '',
+      invoice_details: row.invoice_details ?? '',
+      notes: row.notes ?? '',
+    })
     setEditRow(row); setFormError(null); setModalOpen(true)
   }
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
-    const payload = { ...values, machine_id: values.machine_id ? Number(values.machine_id) : null }
+    const payload = {
+      phone: values.phone,
+      client_name: values.client_name || null,
+      company: values.company || null,
+      email_address: values.email_address || null,
+      location: values.location || null,
+      vat_no: values.vat_no || null,
+      salesman: values.salesman || null,
+      first_contact: values.first_contact || null,
+      sale_status: values.sale_status || null,
+      product_id: values.product_id ? Number(values.product_id) : null,
+      quantity: values.quantity ? Number(values.quantity) : null,
+      price: values.price ? Number(values.price) : null,
+      shipping_cost: values.shipping_cost ? Number(values.shipping_cost) : null,
+      total: values.total ? Number(values.total) : null,
+      payment_method: values.payment_method || null,
+      paypal_invoice_number: values.paypal_invoice_number || null,
+      tracking_number: values.tracking_number || null,
+      shipping_details: values.shipping_details || null,
+      invoice_details: values.invoice_details || null,
+      notes: values.notes || null,
+    }
     const { error } = editRow
       ? await supabase.from('Sales').update(payload).eq('id', editRow.id)
       : await supabase.from('Sales').insert(payload)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'sales', editRow?.id ?? null, `Zamówienie: ${values.company ?? values.phone}`, changes)
     setModalOpen(false); fetchData()
   }
@@ -194,7 +295,10 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
 
   return (
     <>
-      <PageHeader title="Zamówienia" subtitle={role === 'logistyka' ? 'Podgląd zamówień (tylko odczyt)' : 'Zarządzanie zamówieniami'} />
+      <PageHeader
+        title="Zamówienia"
+        subtitle={role === 'logistyka' ? 'Podgląd zamówień (tylko odczyt)' : 'Zarządzanie zamówieniami'}
+      />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
         columns={columns as unknown as Column<Record<string, unknown>>[]}
@@ -204,9 +308,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         onEdit={canEdit ? (row) => openEdit(row as unknown as Sale) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Sale) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj zamówienie"
-        sortKey={sortKey}
-        sortDir={sortDir}
-        onSortChange={handleSort}
+        sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
         columnFilters={columnFilters}
         onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
@@ -217,39 +319,105 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
               Uzupełniono dane z poprzedniego zamówienia tego klienta
             </div>
           )}
+
+          <FormSection title="Klient" />
           <FormField label="Telefon *" error={errors.phone?.message}><input {...register('phone')} style={inputStyle} /></FormField>
+          <FormField label="Imię i nazwisko"><input {...register('client_name')} style={inputStyle} /></FormField>
+          <FormField label="Firma"><input {...register('company')} style={inputStyle} /></FormField>
+          <FormField label="Email"><input {...register('email_address')} style={inputStyle} /></FormField>
+          <FormField label="Lokalizacja"><input {...register('location')} style={inputStyle} placeholder="np. Niemcy" /></FormField>
+          <FormField label="VAT No (EU)"><input {...register('vat_no')} style={inputStyle} /></FormField>
+
+          <FormSection title="Zamówienie" />
           <FormField label="Handlowiec">
-            <Controller
-              name="salesman"
-              control={control}
+            <Controller name="salesman" control={control}
               render={({ field }) => (
-                <SalesmanAutocomplete
-                  salesmen={salesmen}
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  inputStyle={inputStyle}
-                />
+                <SalesmanAutocomplete salesmen={salesmen} value={field.value ?? ''} onChange={field.onChange} inputStyle={inputStyle} />
               )}
             />
           </FormField>
-          <FormField label="Email"><input {...register('email_address')} style={inputStyle} /></FormField>
+          <FormField label="Pierwszy kontakt">
+            <Controller name="first_contact" control={control}
+              render={({ field }) => (
+                <SalesmanAutocomplete salesmen={salesmen} value={field.value ?? ''} onChange={field.onChange} inputStyle={inputStyle} />
+              )}
+            />
+          </FormField>
           <FormField label="Status">
             <select {...register('sale_status')} style={inputStyle}>
               <option value="">— wybierz —</option>
               {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </FormField>
-          <FormField label="Firma"><input {...register('company')} style={inputStyle} /></FormField>
-          <FormField label="ID maszyny"><input {...register('machine_id')} type="number" style={inputStyle} /></FormField>
-          <FormField label="Nr śledzenia"><input {...register('tracking_number')} style={inputStyle} /></FormField>
+          <FormField label="Ilość"><input {...register('quantity')} type="number" min="1" style={inputStyle} /></FormField>
+          <div className="col-span-2">
+            <FormField label="Produkt">
+              <select {...register('product_id')} style={inputStyle}>
+                <option value="">— wybierz produkt —</option>
+                {emulators.length > 0 && (
+                  <optgroup label="Emulatory">
+                    {emulators.map(p => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.name} (Stan: {p.stock_qty})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {pipes.length > 0 && (
+                  <optgroup label="Rury">
+                    {pipes.map(p => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.name} (Stan: {p.stock_qty})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {others.length > 0 && (
+                  <optgroup label="Inne">
+                    {others.map(p => (
+                      <option key={p.id} value={String(p.id)}>
+                        {p.name} (Stan: {p.stock_qty})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </FormField>
+          </div>
+
+          <FormSection title="Płatność" />
+          <FormField label="Cena (€)"><input {...register('price')} type="number" step="0.01" style={inputStyle} /></FormField>
+          <FormField label="Shipping (€)"><input {...register('shipping_cost')} type="number" step="0.01" style={inputStyle} /></FormField>
+          <FormField label="Total (€)"><input {...register('total')} type="number" step="0.01" style={inputStyle} /></FormField>
+          <FormField label="Sposób płatności">
+            <select {...register('payment_method')} style={inputStyle}>
+              <option value="">— wybierz —</option>
+              {PAYMENT_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </FormField>
           <FormField label="PayPal Invoice"><input {...register('paypal_invoice_number')} style={inputStyle} /></FormField>
-          <div className="col-span-2"><FormField label="Adres wysyłki"><textarea {...register('shipping_details')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField></div>
-          <div className="col-span-2"><FormField label="Dane faktury"><textarea {...register('invoice_details')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField></div>
+          <FormField label="Nr śledzenia"><input {...register('tracking_number')} style={inputStyle} /></FormField>
+
+          <FormSection title="Adresy i notatki" />
+          <div className="col-span-2">
+            <FormField label="Adres wysyłki"><textarea {...register('shipping_details')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField>
+          </div>
+          <div className="col-span-2">
+            <FormField label="Dane faktury"><textarea {...register('invoice_details')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} /></FormField>
+          </div>
+          <div className="col-span-2">
+            <FormField label="Notatki"><textarea {...register('notes')} style={{ ...inputStyle, minHeight: '50px', resize: 'vertical' }} /></FormField>
+          </div>
+
           {formError && <p className="col-span-2 text-sm" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <FormActions onCancel={() => setModalOpen(false)} isSubmitting={isSubmitting} className="col-span-2" />
         </form>
       </Modal>
-      <ConfirmDialog open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={onDelete} loading={deleteLoading} title="Usuń zamówienie" description={`Czy na pewno chcesz usunąć zamówienie dla "${deleteRow?.company ?? deleteRow?.phone}"?`} />
+      <ConfirmDialog
+        open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={onDelete} loading={deleteLoading}
+        title="Usuń zamówienie"
+        description={`Czy na pewno chcesz usunąć zamówienie dla "${deleteRow?.company ?? deleteRow?.phone}"?`}
+      />
     </>
   )
 }

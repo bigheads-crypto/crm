@@ -17,7 +17,13 @@
     "hostings": "Hostingi",
     "adminUsers": "Użytkownicy",
     "adminPermissions": "Uprawnienia zakładek",
-    "activityLog": "Logi aktywności"
+    "activityLog": "Logi aktywności",
+    "warehouse": "Magazyn",
+    "warehouseEmulatory": "Emulatory",
+    "warehouseZestawy": "Zestawy",
+    "warehouseWiazki": "Wiązki",
+    "warehouseHardware": "Hardware",
+    "warehouseSoftware": "Software"
   },
   "auth": {
     "title": "Zaloguj się do CRM",
