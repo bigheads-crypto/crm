@@ -161,9 +161,23 @@ const columns = useMemo<Column<T>[]>(() => [
 1. Server Component pobiera `initialData` + `initialCount` z Supabase
 2. Client Component (`*Client.tsx`) zarządza stanem: `data, count, page, sortKey, sortDir, columnFilters`
 3. `fetchData` w `useCallback` odpytuje Supabase: `applyColumnFilters(query, columnFilters)` + order + range
-4. `columnFilters` w deps array `useCallback` — zmiana filtra wyzwala nowe zapytanie
+4. **`useEffect(() => { fetchData() }, [fetchData])`** — WYMAGANE, bez tego filtry/sort/paginacja nie działają. `useCallback` zmienia referencję `fetchData` gdy zmieniają się deps, `useEffect` to wychwytuje i wywołuje fetch.
 5. DataTable otrzymuje `columnFilters` + `onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}`
 6. CRUD przez Supabase client + `fetchData()` po każdej operacji
+
+## Internacjonalizacja — zasada obowiązkowa
+**WSZYSTKIE** stringi widoczne dla użytkownika muszą przechodzić przez `useTranslations()` z `next-intl`. Nigdy nie hardkoduj polskich napisów bezpośrednio w komponentach.
+
+```tsx
+// ✅ Dobrze
+const t = useTranslations('warehouse')
+<PageHeader title={t('title')} subtitle={t('subtitle')} />
+
+// ❌ Źle
+<PageHeader title="Emulatory" subtitle="Katalog emulatorów" />
+```
+
+Nowe klucze dopisywać równolegle do `i18n/pl.json` i `i18n/en.json`. Dotyczy: tytułów stron, nagłówków kolumn, etykiet formularzy, komunikatów błędów, przycisków.
 
 ## Strona ustawień użytkownika (`/settings`)
 - Dostępna dla wszystkich zalogowanych ról — link w dropdown menu Navbar (ikona użytkownika, góra prawa)
