@@ -134,17 +134,28 @@ Nigdy nie używaj `user!.id` — `requireAuth` sam obsłuży brak sesji (redirec
 |---|---|
 | `OLX` | `OLXCandidate` |
 | `Machines` | `Machine` |
+| `Machine Issues` | `MachineIssue` |
+| `Sales` | `Sale` |
 | `Sales Deals` | `SalesDeal` |
 | `Sales Quality` | `SalesQuality` |
 | `Sales Text Log` | `SalesTextLog` |
 | `Support Case` | `SupportCase` |
 | `Support Log` | `SupportLog` |
 | `Support Text Log` | `SupportTextLog` |
-| `Sales` | `Sale` |
+| `Support Backlog` | `SupportBacklog` |
+| `domains` | `Domain` |
+| `hostings` | `Hosting` |
+| `Opinie` | `Review` |
+| `Products` | `Product` (moduł Emulatory w Magazynie) |
+| `Zestawy` | `Zestaw` |
+| `Wiazki` | `Wiazka` |
+| `Hardware` | `Hardware` |
+| `Software` | `Software` |
+| `activity_logs` | `ActivityLog` (interfejs lokalny w `ActivityLogClient.tsx`) |
 | `profiles` | `Profile` (rozszerzenie Supabase Auth) |
 | `tab_permissions` | macierz uprawnień (rola × zakładka) |
 
-**Konwencje nazewnictwa:** nazwy tabel mają **spacje** i z dużej litery — `Sales Deals`, `Support Case`, `Sales Text Log`. Supabase jest case-sensitive.
+**Konwencje nazewnictwa:** większość tabel ma **spacje** i wielką literę — `Sales Deals`, `Support Case`, `Machine Issues`. Wyjątki: `domains`, `hostings` (lowercase), `OLX` (all-caps). Supabase jest case-sensitive.
 
 ### Punktacja / oceny
 

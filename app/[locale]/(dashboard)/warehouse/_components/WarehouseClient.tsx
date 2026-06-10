@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslations } from 'next-intl'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -24,16 +25,15 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 const PAGE_SIZE = 50
 
-const schema = z.object({
-  name: z.string().min(1, 'Wymagane'),
-  plytka: z.string().optional(),
-  program: z.string().optional(),
-  category: z.string().optional(),
-  stock_qty: z.string().optional(),
-  price_default: z.string().optional(),
-  notes: z.string().optional(),
-})
-type FormData = z.infer<typeof schema>
+type FormData = {
+  name: string
+  plytka?: string
+  program?: string
+  category?: string
+  stock_qty?: string
+  price_default?: string
+  notes?: string
+}
 
 function StockBadge({ qty }: { qty: number }) {
   const color = qty >= 10 ? '#10a872' : qty >= 3 ? '#e8a800' : '#e8384f'
@@ -51,6 +51,8 @@ function StockBadge({ qty }: { qty: number }) {
 interface Props { initialData: Product[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
 export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }: Props) {
+  const t = useTranslations('warehouse')
+
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -82,16 +84,16 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const columns = useMemo<Column<Product>[]>(() => [
-    { key: 'name', header: 'Nazwa', sortable: true, filterable: true },
+    { key: 'name', header: t('emulatory.colName'), sortable: true, filterable: true },
     {
-      key: 'plytka', header: 'Płytka', width: '180px', sortable: true,
+      key: 'plytka', header: t('emulatory.colPlytka'), width: '180px', sortable: true,
       filterOptions: plytkaOptions,
       render: (v) => v ? (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{String(v)}</span>
       ) : '—',
     },
     {
-      key: 'program', header: 'Program', filterable: true,
+      key: 'program', header: t('emulatory.colProgram'), filterable: true,
       render: (v) => v ? (
         <span style={{ fontSize: '12px' }} title={String(v)}>
           {String(v).length > 40 ? String(v).slice(0, 40) + '…' : String(v)}
@@ -99,22 +101,32 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
       ) : '—',
     },
     {
-      key: 'stock_qty', header: 'Stan', width: '80px', sortable: true, filterable: false,
+      key: 'stock_qty', header: t('emulatory.colStock'), width: '80px', sortable: true, filterable: false,
       render: (v) => <StockBadge qty={Number(v ?? 0)} />,
     },
     {
-      key: 'category', header: 'Typ', width: '110px', sortable: true,
+      key: 'category', header: t('emulatory.colCategory'), width: '110px', sortable: true,
       render: (v) => v ? <StatusBadge status={String(v)} colors={CATEGORY_COLORS} /> : '—',
       filterOptions: CATEGORY_OPTIONS,
     },
-    { key: 'notes', header: 'Notatki', filterable: false,
+    { key: 'notes', header: t('emulatory.colNotes'), filterable: false,
       render: (v) => v ? (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }} title={String(v)}>
           {String(v).length > 50 ? String(v).slice(0, 50) + '…' : String(v)}
         </span>
       ) : '—',
     },
-  ], [plytkaOptions])
+  ], [plytkaOptions, t])
+
+  const schema = z.object({
+    name: z.string().min(1, t('required')),
+    plytka: z.string().optional(),
+    program: z.string().optional(),
+    category: z.string().optional(),
+    stock_qty: z.string().optional(),
+    price_default: z.string().optional(),
+    notes: z.string().optional(),
+  })
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -170,7 +182,7 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
     const { error } = editRow
       ? await supabase.from('Products').update(payload).eq('id', editRow.id)
       : await supabase.from('Products').insert(payload)
-    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    if (error) { setFormError(t('saveError')); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse', editRow?.id ?? null, `Produkt: ${values.name}`, changes)
     setModalOpen(false)
@@ -182,7 +194,7 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Products').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
     void logActivity(supabase, 'delete', 'warehouse', deleteRow.id, `Produkt: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -192,8 +204,8 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
   return (
     <>
       <PageHeader
-        title="Emulatory"
-        subtitle="Katalog emulatorów i stanów magazynowych"
+        title={t('emulatory.title')}
+        subtitle={t('emulatory.subtitle')}
       />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
@@ -202,40 +214,40 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
         onAdd={canWrite ? openAdd : undefined}
         onEdit={canEdit ? (row) => openEdit(row as unknown as Product) : undefined}
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Product) : undefined}
-        loading={loading} canEdit={canEdit} canDelete={canEdit} addLabel="Dodaj emulator"
+        loading={loading} canEdit={canEdit} canDelete={canEdit} addLabel={t('emulatory.addLabel')}
         sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
         columnFilters={columnFilters}
         onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}
       />
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? 'Edytuj emulator' : 'Nowy emulator'}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editRow ? t('emulatory.modalEdit') : t('emulatory.modalAdd')}>
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <FormField label="Nazwa *" error={errors.name?.message}>
+            <FormField label={`${t('emulatory.fieldName')} *`} error={errors.name?.message}>
               <input {...register('name')} style={inputStyle} placeholder="np. Mercedes MP3" />
             </FormField>
           </div>
-          <FormField label="Płytka">
+          <FormField label={t('emulatory.fieldPlytka')}>
             <input {...register('plytka')} style={inputStyle} placeholder="np. Metalbox 1x chip" />
           </FormField>
-          <FormField label="Kategoria">
+          <FormField label={t('emulatory.fieldCategory')}>
             <select {...register('category')} style={inputStyle}>
-              <option value="">— wybierz —</option>
+              <option value="">{t('selectPlaceholder')}</option>
               {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </FormField>
           <div className="col-span-2">
-            <FormField label="Program (wersja firmware)">
+            <FormField label={t('emulatory.fieldProgram')}>
               <input {...register('program')} style={inputStyle} placeholder="np. For mercedes e5 v 2.4" />
             </FormField>
           </div>
-          <FormField label="Stan magazynowy">
+          <FormField label={t('emulatory.fieldStock')}>
             <input {...register('stock_qty')} type="number" min="0" style={inputStyle} />
           </FormField>
-          <FormField label="Cena domyślna (€)">
+          <FormField label={t('emulatory.fieldPrice')}>
             <input {...register('price_default')} type="number" step="0.01" style={inputStyle} />
           </FormField>
           <div className="col-span-2">
-            <FormField label="Notatki">
+            <FormField label={t('emulatory.fieldNotes')}>
               <textarea {...register('notes')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
             </FormField>
           </div>
@@ -245,8 +257,8 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
       </Modal>
       <ConfirmDialog
         open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={onDelete} loading={deleteLoading}
-        title="Usuń emulator"
-        description={`Czy na pewno chcesz usunąć "${deleteRow?.name}"?`}
+        title={t('emulatory.deleteTitle')}
+        description={t('emulatory.deleteDesc', { name: deleteRow?.name ?? '' })}
       />
     </>
   )

@@ -18,13 +18,13 @@ Pogrupowane po priorytecie. Każda pozycja: plik(i), problem, propozycja fixa.
 
 | Zadanie | Zalecany model | Effort | Dlaczego |
 |---|---|---|---|
-| F1.1 — casty TS2352 (7 plików) | Sonnet | medium | mechaniczne, jeden wzorzec |
-| F1.2 — zod `errorMap` → `message` | Sonnet | medium | jedna linia |
-| F1.3 — zodResolver/useForm w SupportBacklog | Sonnet, przy utknięciu Opus | high | gnarly generyki zod v4 + RHF; max 2 próby Sonnetem |
-| F2 — reguła ESLint `set-state-in-effect` | Sonnet | medium | zmiana konfiguracyjna |
+| ~~F1.1 — casty TS2352 (7 plików)~~ | ~~Sonnet~~ | ~~medium~~ | ✅ zrobione v2.78 |
+| ~~F1.2 — zod `errorMap` → `message`~~ | ~~Sonnet~~ | ~~medium~~ | ✅ zrobione v2.78 |
+| ~~F1.3 — zodResolver/useForm w SupportBacklog~~ | ~~Sonnet~~ | ~~medium~~ | ✅ zrobione v2.78 |
+| ~~F2 — reguła ESLint `set-state-in-effect`~~ | ~~Sonnet~~ | ~~medium~~ | ✅ zrobione v2.79 |
 | F3 — custom role (4 pliki, warstwa auth) | **Opus** | **high** | decyzje architektoniczne, dotyka API i proxy |
-| F4 — i18n Magazynu | Sonnet | medium | powtarzalny schemat; po pracy sprawdzić parytet pl/en |
-| F5 — kolory, unused props, useMemo | Sonnet | low/medium | trywialne |
+| ~~F4 — i18n Magazynu~~ | ~~Sonnet~~ | ~~medium~~ | ✅ zrobione v2.80 |
+| ~~F5 — kolory, unused props, useMemo~~ | ~~Sonnet~~ | ~~low/medium~~ | ✅ zrobione v2.79 |
 | F6 — aktualizacja DOCS.md/TODO.md | Sonnet | low | dokumentacja |
 
 ### Rekomendacje — reszta listy (pkt 4–34, bezpieczeństwo, infra)
@@ -34,14 +34,14 @@ Pogrupowane po priorytecie. Każda pozycja: plik(i), problem, propozycja fixa.
 | 4.1 — mass assignment `update_role` | Sonnet | medium | rozdzielenie akcji, mały zakres |
 | 4.2 — wyciek treści błędów API | Sonnet | low | zamiana na generic message + `console.error` |
 | 4.3 — rate limit / audit log w API admin | **Opus** | **high** | projekt mechanizmu, warstwa bezpieczeństwa |
-| 6 — 2 niebieskie rgba | Sonnet | low | = F5, dwie linie |
+| ~~6 — 2 niebieskie rgba~~ | ~~Sonnet~~ | ~~low~~ | ✅ zrobione v2.79 (= F5) |
 | 9 — `getWeekLabel` ISO-8601 | Sonnet | medium | mała funkcja; sprawdzić czy `date-fns` jest w `package.json` |
 | 10 — KPI „Kandydaci OLX" | Sonnet | medium | wariant 2 (label) trywialny; wariant 1 wymaga migracji DB — decyzja użytkownika przed startem |
 | 11 — filterOptions przez RPC | Sonnet | high | SQL prosty, ale refactor w 5 plikach; testować filtry po każdym module |
 | 12 — i18n wszystkich modułów (15 stron) | Sonnet | medium | powtarzalne; robić moduł po module, po każdym sprawdzić parytet pl/en |
 | 13 — dedup domains/hostings → shared | Sonnet | medium | refactor wg istniejącego wzorca w `components/shared/` |
 | 14 — globalne toasty (sonner) | Sonnet | high | nowa zależność + dotyka wszystkich CRUD-ów; mechaniczne ale szerokie |
-| 15 — `useMemo` na `data.map` | Sonnet | low | = F5, dwie linie |
+| ~~15 — `useMemo` na `data.map`~~ | ~~Sonnet~~ | ~~low~~ | ✅ zrobione v2.79 (= F5) |
 | 16 — `eslint-disable exhaustive-deps` w DataTable | **Opus** | **high** | analiza stale closure we współdzielonym komponencie — błąd zepsuje wszystkie tabele |
 | 17 — `autoFocus` na checkboxach | Sonnet | low | usunięcie atrybutu |
 | 18 — persistencja szerokości kolumn | Sonnet | medium | mały feature, wzorzec podany w opisie |
@@ -71,17 +71,17 @@ Pogrupowane po priorytecie. Każda pozycja: plik(i), problem, propozycja fixa.
 
 Sugerowana kolejność na Sonnecie: F1.1 → F1.2 → F2 → F5 → F6 → F4. Na sesję z Opusem: F3, 16, 32, 4.3 (+ ewentualnie F1.3, 20).
 
-### F1. Type-check nie przechodzi — 13 błędów, bloker `next build` 🔴
+### ~~F1. Type-check nie przechodzi — 13 błędów, bloker `next build`~~ ✅ ZROBIONE v2.78
 
-`npx tsc --noEmit` zwraca 13 błędów. Next.js failuje produkcyjny build na błędach typów.
+`npx tsc --noEmit` zwraca 0 błędów.
 
-1. **7× TS2352** — `editRow as Record<string, unknown>` przy `computeChanges` w: `CandidatesClient.tsx:108`, `MachinesClient.tsx:104`, `MachineIssuesClient.tsx:83`, `ReviewsClient.tsx:165`, `SalesDealsClient.tsx:118`, `SalesQualityClient.tsx:121`, `SupportCasesClient.tsx:111`. Fix: `as unknown as Record<string, unknown>` albo poluzować sygnaturę `computeChanges` w `lib/activity-log.ts` (np. przyjąć generyka `<T extends object>`).
-2. **`ReviewsClient.tsx:22`** — `z.enum(..., { errorMap })`: zod v4 nie zna `errorMap`, użyć `{ error: '...' }` lub `{ message: '...' }`.
-3. **`SupportBacklogClient.tsx:107-108, 471, 544`** — niezgodność typów `zodResolver`/`useForm`: schema z `.default()`/optional daje inny typ wejściowy niż wyjściowy. Fix: `useForm<Input, unknown, Output>` (trzy generyki) albo ujednolicić schemę.
+1. ✅ **7× TS2352** — `lib/activity-log.ts`: `oldRow: Record<string,unknown>` → `oldRow: object` + cast wewnątrz; usunięto `as Record<string,unknown>` z 7 klientów.
+2. ✅ **`ReviewsClient.tsx:22`** — `errorMap:` → `error:` (zod v4).
+3. ✅ **`SupportBacklogClient.tsx`** — dodano `CaseFormInput = z.input<typeof caseSchema>`; `useForm<CaseFormInput, unknown, CaseFormData>`.
 
-### F2. ESLint — reguła `react-hooks/set-state-in-effect` vs konwencja projektu 🔴
+### ~~F2. ESLint — reguła `react-hooks/set-state-in-effect`~~ ✅ ZROBIONE v2.79
 
-Lint: 27 błędów, z czego ~22 to nowa reguła `set-state-in-effect` krzycząca na **wymagany przez CLAUDE.md** wzorzec `useEffect(() => { fetchData() }, [fetchData])` (~20 plików) + `DataTable.tsx:103`. Decyzja systemowa: wyłączyć regułę w `eslint.config.mjs` (rekomendowane — wzorzec jest świadomy) albo zmienić konwencję. Bez tego lint nie nadaje się na bramkę CI. Fałszywe alarmy „purity" na `Date.now()` w `dashboard/page.tsx:161,167` (Server Component) — przy okazji.
+`eslint.config.mjs`: `'react-hooks/set-state-in-effect': 'off'` (świadomy wzorzec projektu). `dashboard/page.tsx:161,167`: `eslint-disable-next-line react-hooks/purity`. Wynik: 0 errors, 5 warnings (planowane).
 
 ### F3. Role niestandardowe (v2.68) — martwa funkcjonalność 🟠
 
@@ -94,20 +94,20 @@ Rolę można utworzyć w panelu uprawnień, ale nie da się jej nikomu nadać:
 
 Fix: pobierać listę ról dynamicznie (z `tab_permissions` / dedykowanej tabeli ról), walidować w API przeciw tej liście, redirect dla custom ról wyliczać z pierwszej zakładki z `can_view`.
 
-### F4. Moduł Magazyn łamie twardą zasadę i18n 🟠
+### ~~F4. Moduł Magazyn łamie twardą zasadę i18n~~ ✅ ZROBIONE v2.80
 
-Cały Magazyn (v2.77, nowy kod): hardkodowane polskie stringi — nagłówki kolumn, walidacja (`'Wymagane'`), tytuły, etykiety form (5 plików `warehouse/**/*Client.tsx` + `page.tsx`). Przepiąć na `useTranslations('warehouse')` + klucze równolegle w `i18n/pl.json` i `i18n/en.json`. Przy okazji: `Navbar.tsx:6` ma nieużywany import `useTranslations` (rozgrzebane przepięcie).
+Wszystkie 5 komponentów `warehouse/**/*Client.tsx` przepięte na `useTranslations('warehouse')`. Klucze dodane równolegle do `i18n/pl.json` i `i18n/en.json` (parytet 277=277). Nieużywany import `useTranslations` w `Navbar.tsx` usunięty.
 
-### F5. Drobne resztki — potwierdzone w przeglądzie 🟡
+### ~~F5. Drobne resztki — potwierdzone w przeglądzie~~ ✅ ZROBIONE v2.79
 
-- 2 niebieskie `rgba(79,110,247,…)`: `dashboard/page.tsx:289`, `DashboardCharts.tsx:109` (= pkt 6 poniżej).
-- Nieużywany prop `role` w ~12 klientach (przyjmowany, nigdy nie czytany) — usunąć z interfejsów Props albo zacząć używać.
-- `data.map` bez `useMemo` w `DomainsClient.tsx:137`, `HostingsClient.tsx:137` (= pkt 15).
+- ✅ rgba: `dashboard/page.tsx:289`, `DashboardCharts.tsx:109` → `rgba(224,120,24,…)`
+- ✅ `role` prop: usunięty z 17 klientów (import + Props + destrukturyzacja) + 17 `page.tsx`. Zachowany w: `SalesClient`, `MachinesClient`, `AdminUsersClient`, `PermissionsClient` (tam używany).
+- ✅ `useMemo`: `DomainsClient.tsx`, `HostingsClient.tsx` — `const rows = useMemo(() => data.map(...), [data])`
 
-### F6. Dokumentacja odjechała od kodu 🟡
+### ~~F6. Dokumentacja odjechała od kodu~~ ✅ ZROBIONE v2.80
 
-- `DOCS.md` → „Baza danych" nie wymienia tabel: `domains`, `hostings`, `Opinie`, `Support Backlog`, `Machine Issues`, `Products`, `Zestawy`, `Wiazki`, `Hardware`, `Software`, `activity_logs`.
-- **Pkt 5 poniżej jest nieaktualny** — Domains/Hostings mają już obsługę `{ error }` (zweryfikowane 2026-06-10). Usunąć przy najbliższej edycji.
+- ✅ `DOCS.md` → „Baza danych": dodano wszystkie brakujące tabele (`domains`, `hostings`, `Opinie`, `Support Backlog`, `Machine Issues`, `Products`, `Zestawy`, `Wiazki`, `Hardware`, `Software`, `activity_logs`) + poprawiono notę o konwencjach nazewnictwa.
+- ✅ Pkt 5 (Domains/Hostings error handling) — usunięty jako zdezaktualizowany (zweryfikowane 2026-06-10).
 
 ### ✅ Co przegląd potwierdził jako poprawne
 
@@ -128,29 +128,6 @@ Cały Magazyn (v2.77, nowy kod): hardkodowane polskie stringi — nagłówki kol
 2. **Wyciek treści błędów** — wszystkie response zwracają `'Auth: ${error.message}'` / `'Profil: ${error.message}'` (linie 101, 111, 122, 131). To surowe komunikaty Postgres/Supabase. Logować po stronie serwera (np. `console.error` + Sentry), klientowi zwracać generic `'Nie udało się utworzyć użytkownika'`.
 
 3. **Brak rate limit / audit log** — endpoint admin tworzy użytkowników z dowolnym hasłem; co najmniej rejestrować w `activity_log` (kto, kogo, kiedy, jaka akcja).
-
----
-
-### 5. Brak obsługi błędów w CRUD — Domains/Hostings
-
-> Stan na 2026-06-09: 17/19 modułów ma już `const { error } = await supabase.from(...)...`. Pozostały dwa.
-
-**Pliki:**
-- `app/[locale]/(dashboard)/domains/_components/DomainsClient.tsx`
-- `app/[locale]/(dashboard)/hostings/_components/HostingsClient.tsx`
-
-Wciąż wywołują `await supabase.from('Domains').insert({...})` bez sprawdzania `{ error }`. Jeśli RLS odrzuci, użytkownik widzi „sukces" mimo że nic nie zostało zapisane.
-
-**Fix.** Wzorzec już używany w pozostałych modułach (np. SalesDealsClient:114-117):
-
-```tsx
-const { error } = editRow
-  ? await supabase.from('Domains').update(values).eq('id', editRow.id)
-  : await supabase.from('Domains').insert(values)
-if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-```
-
-Docelowo wszystko podpiąć pod globalne toasty (pkt 14).
 
 ---
 

@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslations } from 'next-intl'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -23,13 +24,12 @@ const PRODUCT_LINE_COLORS: Record<string, string> = {
 
 const PAGE_SIZE = 50
 
-const schema = z.object({
-  product_line: z.string().min(1, 'Wymagane'),
-  name: z.string().min(1, 'Wymagane'),
-  plytka: z.string().optional(),
-  notes: z.string().optional(),
-})
-type FormData = z.infer<typeof schema>
+type FormData = {
+  product_line: string
+  name: string
+  plytka?: string
+  notes?: string
+}
 
 interface Props {
   initialData: Software[]
@@ -39,6 +39,8 @@ interface Props {
 }
 
 export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }: Props) {
+  const t = useTranslations('warehouse')
+
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -68,25 +70,32 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
 
   const columns = useMemo<Column<Software>[]>(() => [
     {
-      key: 'product_line', header: 'Linia', width: '120px', sortable: false,
+      key: 'product_line', header: t('software.colLine'), width: '120px', sortable: false,
       filterOptions: PRODUCT_LINE_OPTIONS,
       render: (v) => v ? <StatusBadge status={String(v)} colors={PRODUCT_LINE_COLORS} /> : '—',
     },
-    { key: 'name', header: 'Program', sortable: true, filterable: true },
+    { key: 'name', header: t('software.colProgram'), sortable: true, filterable: true },
     {
-      key: 'plytka', header: 'Płytka', width: '200px', sortable: true,
+      key: 'plytka', header: t('software.colPlytka'), width: '200px', sortable: true,
       filterOptions: plytkaOptions,
       render: (v) => v ? <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{String(v)}</span> : '—',
     },
     {
-      key: 'notes', header: 'Notatki', filterable: false,
+      key: 'notes', header: t('software.colNotes'), filterable: false,
       render: (v) => v ? (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }} title={String(v)}>
           {String(v).length > 60 ? String(v).slice(0, 60) + '…' : String(v)}
         </span>
       ) : '—',
     },
-  ], [plytkaOptions])
+  ], [plytkaOptions, t])
+
+  const schema = z.object({
+    product_line: z.string().min(1, t('required')),
+    name: z.string().min(1, t('required')),
+    plytka: z.string().optional(),
+    notes: z.string().optional(),
+  })
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -139,7 +148,7 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
     const { error } = editRow
       ? await supabase.from('Software').update(payload).eq('id', editRow.id)
       : await supabase.from('Software').insert(payload)
-    if (error) { setFormError(`Błąd: ${error.message}`); return }
+    if (error) { setFormError(t('saveError')); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse-software', editRow?.id ?? null, `Software: ${values.name}`, changes)
     setModalOpen(false)
@@ -151,7 +160,7 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Software').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
     void logActivity(supabase, 'delete', 'warehouse-software', deleteRow.id, `Software: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -161,8 +170,8 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
   return (
     <>
       <PageHeader
-        title="Software"
-        subtitle="Katalog programów i firmware emulatorów"
+        title={t('software.title')}
+        subtitle={t('software.subtitle')}
       />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
@@ -177,7 +186,7 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
         loading={loading}
         canEdit={canEdit}
         canDelete={canEdit}
-        addLabel="Dodaj program"
+        addLabel={t('software.addLabel')}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
@@ -187,24 +196,24 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editRow ? 'Edytuj program' : 'Nowy program'}
+        title={editRow ? t('software.modalEdit') : t('software.modalAdd')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
-          <FormField label="Linia produktów *" error={errors.product_line?.message}>
+          <FormField label={`${t('software.fieldLine')} *`} error={errors.product_line?.message}>
             <select {...register('product_line')} style={inputStyle}>
               {PRODUCT_LINE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </FormField>
-          <FormField label="Płytka">
+          <FormField label={t('software.fieldPlytka')}>
             <input {...register('plytka')} style={inputStyle} placeholder="np. Płytka 3x chip" />
           </FormField>
           <div className="col-span-2">
-            <FormField label="Nazwa programu *" error={errors.name?.message}>
+            <FormField label={`${t('software.fieldName')} *`} error={errors.name?.message}>
               <input {...register('name')} style={inputStyle} placeholder="np. Kubota V3800 DPF + DEF v1.3" />
             </FormField>
           </div>
           <div className="col-span-2">
-            <FormField label="Notatki">
+            <FormField label={t('software.fieldNotes')}>
               <textarea {...register('notes')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
             </FormField>
           </div>
@@ -223,8 +232,8 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
         onClose={() => setDeleteRow(null)}
         onConfirm={onDelete}
         loading={deleteLoading}
-        title="Usuń program"
-        description={`Czy na pewno chcesz usunąć "${deleteRow?.name}"?`}
+        title={t('software.deleteTitle')}
+        description={t('software.deleteDesc', { name: deleteRow?.name ?? '' })}
       />
     </>
   )

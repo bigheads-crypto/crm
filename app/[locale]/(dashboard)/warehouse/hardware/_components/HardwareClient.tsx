@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslations } from 'next-intl'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -24,13 +25,12 @@ const COMPONENT_TYPE_COLORS: Record<string, string> = {
 
 const PAGE_SIZE = 50
 
-const schema = z.object({
-  component_type: z.string().min(1, 'Wymagane'),
-  name: z.string().min(1, 'Wymagane'),
-  stock_qty: z.string().optional(),
-  notes: z.string().optional(),
-})
-type FormData = z.infer<typeof schema>
+type FormData = {
+  component_type: string
+  name: string
+  stock_qty?: string
+  notes?: string
+}
 
 function StockBadge({ qty }: { qty: number }) {
   const color = qty >= 5 ? '#10a872' : qty >= 2 ? '#e8a800' : '#e8384f'
@@ -45,27 +45,6 @@ function StockBadge({ qty }: { qty: number }) {
   )
 }
 
-const COLUMNS: Column<Hardware>[] = [
-  {
-    key: 'component_type', header: 'Typ', width: '200px', sortable: true,
-    filterOptions: COMPONENT_TYPE_OPTIONS,
-    render: (v) => v ? <StatusBadge status={String(v)} colors={COMPONENT_TYPE_COLORS} /> : '—',
-  },
-  { key: 'name', header: 'Nazwa', sortable: true, filterable: true },
-  {
-    key: 'stock_qty', header: 'Stan', width: '80px', sortable: true, filterable: false,
-    render: (v) => <StockBadge qty={Number(v ?? 0)} />,
-  },
-  {
-    key: 'notes', header: 'Notatki', filterable: false,
-    render: (v) => v ? (
-      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-        {String(v).length > 60 ? String(v).slice(0, 60) + '…' : String(v)}
-      </span>
-    ) : '—',
-  },
-]
-
 interface Props {
   initialData: Hardware[]
   initialCount: number
@@ -74,6 +53,8 @@ interface Props {
 }
 
 export function HardwareClient({ initialData, initialCount, canWrite, canEdit }: Props) {
+  const t = useTranslations('warehouse')
+
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -88,6 +69,34 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
+
+  const columns = useMemo<Column<Hardware>[]>(() => [
+    {
+      key: 'component_type', header: t('hardware.colType'), width: '200px', sortable: true,
+      filterOptions: COMPONENT_TYPE_OPTIONS,
+      render: (v) => v ? <StatusBadge status={String(v)} colors={COMPONENT_TYPE_COLORS} /> : '—',
+    },
+    { key: 'name', header: t('hardware.colName'), sortable: true, filterable: true },
+    {
+      key: 'stock_qty', header: t('hardware.colStock'), width: '80px', sortable: true, filterable: false,
+      render: (v) => <StockBadge qty={Number(v ?? 0)} />,
+    },
+    {
+      key: 'notes', header: t('hardware.colNotes'), filterable: false,
+      render: (v) => v ? (
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          {String(v).length > 60 ? String(v).slice(0, 60) + '…' : String(v)}
+        </span>
+      ) : '—',
+    },
+  ], [t])
+
+  const schema = z.object({
+    component_type: z.string().min(1, t('required')),
+    name: z.string().min(1, t('required')),
+    stock_qty: z.string().optional(),
+    notes: z.string().optional(),
+  })
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -137,7 +146,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     const { error } = editRow
       ? await supabase.from('Hardware').update(payload).eq('id', editRow.id)
       : await supabase.from('Hardware').insert(payload)
-    if (error) { setFormError(`Błąd: ${error.message}`); return }
+    if (error) { setFormError(t('saveError')); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse-hardware', editRow?.id ?? null, `Hardware: ${values.name}`, changes)
     setModalOpen(false)
@@ -149,7 +158,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Hardware').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
     void logActivity(supabase, 'delete', 'warehouse-hardware', deleteRow.id, `Hardware: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -159,12 +168,12 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   return (
     <>
       <PageHeader
-        title="Hardware"
-        subtitle="Płytki surowe, zaprogramowane i obudowy"
+        title={t('hardware.title')}
+        subtitle={t('hardware.subtitle')}
       />
       <DataTable
         data={data as unknown as Record<string, unknown>[]}
-        columns={COLUMNS as unknown as Column<Record<string, unknown>>[]}
+        columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count}
         page={page}
         onPageChange={setPage}
@@ -175,7 +184,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
         loading={loading}
         canEdit={canEdit}
         canDelete={canEdit}
-        addLabel="Dodaj komponent"
+        addLabel={t('hardware.addLabel')}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}
@@ -185,29 +194,29 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editRow ? 'Edytuj komponent' : 'Nowy komponent'}
+        title={editRow ? t('hardware.modalEdit') : t('hardware.modalAdd')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <FormField label="Typ komponentu *" error={errors.component_type?.message}>
+            <FormField label={`${t('hardware.fieldType')} *`} error={errors.component_type?.message}>
               <select {...register('component_type')} style={inputStyle}>
-                <option value="">— wybierz —</option>
-                {COMPONENT_TYPE_OPTIONS.map(t => (
-                  <option key={t} value={t}>{t}</option>
+                <option value="">{t('selectPlaceholder')}</option>
+                {COMPONENT_TYPE_OPTIONS.map(tp => (
+                  <option key={tp} value={tp}>{tp}</option>
                 ))}
               </select>
             </FormField>
           </div>
           <div className="col-span-2">
-            <FormField label="Nazwa *" error={errors.name?.message}>
+            <FormField label={`${t('hardware.fieldName')} *`} error={errors.name?.message}>
               <input {...register('name')} style={inputStyle} placeholder="np. Płytka 3x chip" />
             </FormField>
           </div>
-          <FormField label="Stan magazynowy">
+          <FormField label={t('hardware.fieldStock')}>
             <input {...register('stock_qty')} type="number" min="0" style={inputStyle} />
           </FormField>
           <div className="col-span-2">
-            <FormField label="Notatki">
+            <FormField label={t('hardware.fieldNotes')}>
               <textarea {...register('notes')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />
             </FormField>
           </div>
@@ -226,8 +235,8 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
         onClose={() => setDeleteRow(null)}
         onConfirm={onDelete}
         loading={deleteLoading}
-        title="Usuń komponent"
-        description={`Czy na pewno chcesz usunąć "${deleteRow?.name}"?`}
+        title={t('hardware.deleteTitle')}
+        description={t('hardware.deleteDesc', { name: deleteRow?.name ?? '' })}
       />
     </>
   )

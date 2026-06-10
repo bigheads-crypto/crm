@@ -3,7 +3,6 @@
 // Navbar — górny pasek z tytułem strony, przełącznikiem języka i menu użytkownika
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { LogOut, ChevronDown, UserCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
