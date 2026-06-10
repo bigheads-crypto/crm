@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Hardware, Role } from '@/lib/supabase/types'
+import type { Hardware } from '@/lib/supabase/types'
 
 const COMPONENT_TYPE_OPTIONS = ['płytka surowa', 'płytka zaprogramowana', 'obudowa']
 const COMPONENT_TYPE_COLORS: Record<string, string> = {
@@ -69,7 +69,6 @@ const COLUMNS: Column<Hardware>[] = [
 interface Props {
   initialData: Hardware[]
   initialCount: number
-  role: Role
   canWrite: boolean
   canEdit: boolean
 }

@@ -14,5 +14,5 @@ export default async function SupportTextLogPage() {
     getTabWritePerms(role, 'support-text-log'),
   ])
 
-  return <SupportTextLogClient initialData={data ?? []} initialCount={count ?? 0} role={role} canWrite={canWrite} canEdit={canEdit} />
+  return <SupportTextLogClient initialData={data ?? []} initialCount={count ?? 0} canWrite={canWrite} canEdit={canEdit} />
 }

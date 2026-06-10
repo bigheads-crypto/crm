@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Review, Role } from '@/lib/supabase/types'
+import type { Review } from '@/lib/supabase/types'
 
 const CHANNELS = ['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email'] as const
 
@@ -60,13 +60,12 @@ function CheckBadge({ value }: { value: boolean | null }) {
 interface Props {
   initialData: Review[]
   initialCount: number
-  role: Role
   userName: string
   canWrite: boolean
   canEdit: boolean
 }
 
-export function ReviewsClient({ initialData, initialCount, role, userName, canWrite, canEdit }: Props) {
+export function ReviewsClient({ initialData, initialCount, userName, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

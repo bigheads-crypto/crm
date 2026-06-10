@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { SalesQuality, Role } from '@/lib/supabase/types'
+import type { SalesQuality } from '@/lib/supabase/types'
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
@@ -40,9 +40,9 @@ function RatingBadge({ rating }: { rating: number }) {
   )
 }
 
-interface Props { initialData: SalesQuality[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: SalesQuality[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function SalesQualityClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SalesQualityClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

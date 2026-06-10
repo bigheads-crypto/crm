@@ -18,7 +18,6 @@ export default async function ZestawyPage() {
     <SetsClient
       initialData={data ?? []}
       initialCount={count ?? 0}
-      role={role}
       canWrite={canWrite}
       canEdit={canEdit}
     />

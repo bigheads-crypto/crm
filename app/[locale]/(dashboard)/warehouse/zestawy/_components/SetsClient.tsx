@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Zestaw, Role } from '@/lib/supabase/types'
+import type { Zestaw } from '@/lib/supabase/types'
 
 const PAGE_SIZE = 50
 
@@ -67,7 +67,6 @@ const COLUMNS: Column<Zestaw>[] = [
 interface Props {
   initialData: Zestaw[]
   initialCount: number
-  role: Role
   canWrite: boolean
   canEdit: boolean
 }

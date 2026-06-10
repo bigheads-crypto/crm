@@ -172,8 +172,9 @@ export function DataTable<T extends Record<string, unknown>>({
     resizingRef.current = { key: colKey, startX: e.clientX, startWidth }
     const onMove = (ev: MouseEvent) => {
       if (!resizingRef.current) return
-      const newWidth = Math.max(60, resizingRef.current.startWidth + ev.clientX - resizingRef.current.startX)
-      setColWidths(prev => ({ ...prev, [resizingRef.current!.key]: newWidth }))
+      const { key, startWidth, startX } = resizingRef.current
+      const newWidth = Math.max(60, startWidth + ev.clientX - startX)
+      setColWidths(prev => ({ ...prev, [key]: newWidth }))
     }
     const onUp = () => {
       resizingRef.current = null

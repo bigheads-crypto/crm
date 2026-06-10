@@ -158,12 +158,14 @@ export default async function DashboardPage() {
     supabase
       .from('Sales Deals')
       .select('created_at')
+      // eslint-disable-next-line react-hooks/purity
       .gte('created_at', new Date(Date.now() - 8 * 7 * 86400000).toISOString()),
 
     // Dane dla wykresu SupportCase — ostatnie 8 tygodni
     supabase
       .from('Support Case')
       .select('created_at')
+      // eslint-disable-next-line react-hooks/purity
       .gte('created_at', new Date(Date.now() - 8 * 7 * 86400000).toISOString()),
   ])
 
@@ -286,7 +288,7 @@ export default async function DashboardPage() {
                         style={{
                           backgroundColor:
                             item.type === 'Transakcja'
-                              ? 'rgba(79, 110, 247, 0.15)'
+                              ? 'rgba(224, 120, 24, 0.15)'
                               : 'rgba(245, 158, 11, 0.15)',
                           color:
                             item.type === 'Transakcja' ? 'var(--accent)' : 'var(--warning)',

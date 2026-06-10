@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { SupportLog, Role } from '@/lib/supabase/types'
+import type { SupportLog } from '@/lib/supabase/types'
 
 const schema = z.object({
   phone: z.string().optional(),
@@ -32,9 +32,9 @@ type FormData = z.infer<typeof schema>
 
 const PAGE_SIZE = 25
 
-interface Props { initialData: SupportLog[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: SupportLog[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function SupportLogClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SupportLogClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { SalesDeal, Role } from '@/lib/supabase/types'
+import type { SalesDeal } from '@/lib/supabase/types'
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
@@ -37,12 +37,11 @@ const PAGE_SIZE = 25
 interface Props {
   initialData: SalesDeal[]
   initialCount: number
-  role: Role
   canWrite: boolean
   canEdit: boolean
 }
 
-export function SalesDealsClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SalesDealsClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

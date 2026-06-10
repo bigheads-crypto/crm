@@ -12,7 +12,7 @@ import { DueDateBadge, DaysLeftBadge, getDiffDays } from '@/components/shared/Ba
 import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
-import type { Hosting, Role } from '@/lib/supabase/types'
+import type { Hosting } from '@/lib/supabase/types'
 
 const schema = z.object({
   description: z.string().optional(),
@@ -23,9 +23,9 @@ type FormData = z.infer<typeof schema>
 
 const PAGE_SIZE = 25
 
-interface Props { initialData: Hosting[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: Hosting[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function HostingsClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function HostingsClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -130,11 +130,16 @@ export function HostingsClient({ initialData, initialCount, role, canWrite, canE
     fetchData()
   }
 
+  const rows = useMemo(
+    () => data.map(r => ({ ...r, days_left: r.due_date ? getDiffDays(r.due_date) : null })),
+    [data]
+  )
+
   return (
     <>
       <PageHeader title="Hostingi" subtitle="Zarządzanie hostingami i serwerami" />
       <DataTable
-        data={data.map(r => ({ ...r, days_left: r.due_date ? getDiffDays(r.due_date) : null })) as unknown as Record<string, unknown>[]}
+        data={rows as unknown as Record<string, unknown>[]}
         columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count}
         page={page}

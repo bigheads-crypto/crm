@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { OLXCandidate, Role } from '@/lib/supabase/types'
+import type { OLXCandidate } from '@/lib/supabase/types'
 
 const schema = z.object({
   name: z.string().min(1, 'Wymagane'),
@@ -50,9 +50,9 @@ const COLUMNS: Column<OLXCandidate>[] = [
   },
 ]
 
-interface Props { initialData: OLXCandidate[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: OLXCandidate[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function CandidatesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function CandidatesClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

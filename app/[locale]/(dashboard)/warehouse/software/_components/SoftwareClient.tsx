@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Software, Role } from '@/lib/supabase/types'
+import type { Software } from '@/lib/supabase/types'
 
 const PRODUCT_LINE_OPTIONS = ['4DPF', 'comfylock']
 const PRODUCT_LINE_COLORS: Record<string, string> = {
@@ -34,7 +34,6 @@ type FormData = z.infer<typeof schema>
 interface Props {
   initialData: Software[]
   initialCount: number
-  role: Role
   canWrite: boolean
   canEdit: boolean
 }

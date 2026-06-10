@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity } from '@/lib/activity-log'
-import type { SupportBacklog, SupportBacklogLog, Role } from '@/lib/supabase/types'
+import type { SupportBacklog, SupportBacklogLog } from '@/lib/supabase/types'
 import { PlusCircle, ChevronDown, ChevronUp, Link2, Search, Plus, RefreshCw } from 'lucide-react'
 
 const caseSchema = z.object({
@@ -51,7 +51,6 @@ const taStyle = { ...inputStyle, minHeight: '72px', resize: 'vertical' as const 
 interface Props {
   initialData: SupportBacklog[]
   initialCount: number
-  role: Role
   canWrite: boolean
   canEdit: boolean
 }
@@ -61,7 +60,7 @@ interface LinkedClient {
   salesman: string | null
 }
 
-export function SupportBacklogClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SupportBacklogClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   // Lista
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)

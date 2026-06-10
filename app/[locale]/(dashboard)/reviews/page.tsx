@@ -18,7 +18,6 @@ export default async function ReviewsPage() {
     <ReviewsClient
       initialData={data ?? []}
       initialCount={count ?? 0}
-      role={role}
       userName={profile.full_name ?? ''}
       canWrite={canWrite}
       canEdit={canEdit}

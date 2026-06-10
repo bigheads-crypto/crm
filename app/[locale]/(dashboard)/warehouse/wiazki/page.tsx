@@ -18,7 +18,6 @@ export default async function WiazkiPage() {
     <WiazkiClient
       initialData={data ?? []}
       initialCount={count ?? 0}
-      role={role}
       canWrite={canWrite}
       canEdit={canEdit}
     />

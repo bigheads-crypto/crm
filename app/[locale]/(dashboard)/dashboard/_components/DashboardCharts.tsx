@@ -106,7 +106,7 @@ function ChartCard({
               tickLine={false}
               allowDecimals={false}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(79, 110, 247, 0.08)' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(224, 120, 24, 0.08)' }} />
             <Bar
               dataKey="count"
               fill="var(--accent)"

@@ -14,5 +14,5 @@ export default async function SoftwarePage() {
     getTabWritePerms(role, 'warehouse-software'),
   ])
 
-  return <SoftwareClient initialData={data ?? []} initialCount={count ?? 0} role={role} canWrite={canWrite} canEdit={canEdit} />
+  return <SoftwareClient initialData={data ?? []} initialCount={count ?? 0} canWrite={canWrite} canEdit={canEdit} />
 }

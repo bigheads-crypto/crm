@@ -14,5 +14,5 @@ export default async function SupportCasesPage() {
     getTabWritePerms(role, 'support-cases'),
   ])
 
-  return <SupportCasesClient initialData={data ?? []} initialCount={count ?? 0} role={role} canWrite={canWrite} canEdit={canEdit} />
+  return <SupportCasesClient initialData={data ?? []} initialCount={count ?? 0} canWrite={canWrite} canEdit={canEdit} />
 }

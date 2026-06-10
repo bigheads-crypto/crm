@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { MachineIssue, Role } from '@/lib/supabase/types'
+import type { MachineIssue } from '@/lib/supabase/types'
 
 const schema = z.object({
   model: z.string().min(1, 'Model jest wymagany'),
@@ -29,9 +29,9 @@ const COLUMNS: Column<MachineIssue>[] = [
   { key: 'problem', header: 'Problem', sortable: false, filterable: true },
 ]
 
-interface Props { initialData: MachineIssue[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: MachineIssue[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function MachineIssuesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function MachineIssuesClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

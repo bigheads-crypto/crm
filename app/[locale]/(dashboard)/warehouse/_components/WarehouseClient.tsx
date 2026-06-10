@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Product, Role } from '@/lib/supabase/types'
+import type { Product } from '@/lib/supabase/types'
 
 const CATEGORY_OPTIONS = ['emulator', 'rura', 'pompa', 'inne']
 const CATEGORY_COLORS: Record<string, string> = {
@@ -48,9 +48,9 @@ function StockBadge({ qty }: { qty: number }) {
   )
 }
 
-interface Props { initialData: Product[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: Product[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function WarehouseClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

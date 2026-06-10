@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Wiazka, Role } from '@/lib/supabase/types'
+import type { Wiazka } from '@/lib/supabase/types'
 
 const PRODUCT_LINE_OPTIONS = ['4DPF', 'comfylock']
 const PRODUCT_LINE_COLORS: Record<string, string> = {
@@ -69,7 +69,6 @@ const COLUMNS: Column<Wiazka>[] = [
 interface Props {
   initialData: Wiazka[]
   initialCount: number
-  role: Role
   canWrite: boolean
   canEdit: boolean
 }

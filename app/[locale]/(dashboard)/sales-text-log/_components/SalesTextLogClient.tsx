@@ -13,7 +13,7 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { DirectionBadge } from '@/components/shared/Badge'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { SalesTextLog, Role } from '@/lib/supabase/types'
+import type { SalesTextLog } from '@/lib/supabase/types'
 
 const schema = z.object({
   phone: z.string().optional(),
@@ -36,9 +36,9 @@ const COLUMNS: Column<SalesTextLog>[] = [
   { key: 'created_at', header: 'Data', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
 ]
 
-interface Props { initialData: SalesTextLog[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: SalesTextLog[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function SalesTextLogClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SalesTextLogClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)

@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { SupportCase, Role } from '@/lib/supabase/types'
+import type { SupportCase } from '@/lib/supabase/types'
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
@@ -32,9 +32,9 @@ const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'resolved', 'closed']
 const STATUS_COLORS: Record<string, string> = { open: '#ef4444', pending: '#f59e0b', in_progress: '#e07818', resolved: '#22c55e', closed: '#6b7280' }
 const PAGE_SIZE = 25
 
-interface Props { initialData: SupportCase[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: SupportCase[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
-export function SupportCasesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SupportCasesClient({ initialData, initialCount, canWrite, canEdit }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
