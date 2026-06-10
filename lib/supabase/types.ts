@@ -35,6 +35,7 @@ export type MachineUpdate = Partial<MachineInsert>
 // Kandydaci z OLX
 export interface OLXCandidate {
   id: number
+  created_at: string
   olx_id: number | null
   name: string | null
   position: string | null
@@ -47,7 +48,7 @@ export interface OLXCandidate {
   description: string | null
 }
 
-export type OLXCandidateInsert = Omit<OLXCandidate, 'id'>
+export type OLXCandidateInsert = Omit<OLXCandidate, 'id' | 'created_at'>
 export type OLXCandidateUpdate = Partial<OLXCandidateInsert>
 
 // Transakcje sprzedażowe

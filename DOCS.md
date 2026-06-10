@@ -439,8 +439,7 @@ Działa automatycznie na wszystkich polach — nie dodawaj `:focus` inline.
 
 ## 14. Znane pułapki
 
-- Tabela `OLX` (`OLXCandidate`) **nie ma kolumny `created_at`** — domyślny `sortKey` musi być `'id'`, nie `'created_at'`.
-- Pozostałe tabele mają `created_at` i mogą używać go jako domyślnego sortowania.
+- Wszystkie tabele mają `created_at` i mogą używać go jako domyślnego sortowania.
 - **Kolumny wyliczane** (np. `days_left`) nie istnieją w bazie — przy sortowaniu mapuj na realną kolumnę DB przed wysłaniem do Supabase. Wzorzec: `const dbSortKey = sortKey === 'days_left' ? 'due_date' : sortKey`.
 - **Hydration mismatch z `new Date()`** — komponenty renderujące wartości zależne od aktualnego czasu (różnica dni, sformatowana data) muszą mieć `suppressHydrationWarning` na elemencie ze zmienną treścią. Serwer (UTC) i klient (inna strefa) liczą różne wartości → React regeneruje drzewo. Dotyczy `DaysLeftBadge` i `DueDateBadge` w `hostings` i `domains`.
 - **`useState` z `localStorage` w lazy init** = anty-pattern w RSC. Zacznij od wartości domyślnej, hydratuj w `useEffect`. Patrz TODO.md pkt 7.

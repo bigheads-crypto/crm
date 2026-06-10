@@ -11,13 +11,20 @@ import {
   ShoppingCart,
 } from 'lucide-react'
 
-// Formatuje datę tygodnia (np. "Wk 14")
+// ISO 8601 week number — tydzień zaczyna się w poniedziałek, tydzień 1 zawiera pierwszy czwartek roku
+function getISOWeekAndYear(date: Date): { week: number; year: number } {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7 // 1=pon … 7=nie
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum) // najbliższy czwartek
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  return { week, year: d.getUTCFullYear() }
+}
+
+// Formatuje etykietę tygodnia wg ISO 8601 (np. "2026-W24")
 function getWeekLabel(date: Date): string {
-  const start = new Date(date.getFullYear(), 0, 1)
-  const weekNum = Math.ceil(
-    ((date.getTime() - start.getTime()) / 86400000 + start.getDay() + 1) / 7
-  )
-  return `Wk ${weekNum}`
+  const { week, year } = getISOWeekAndYear(date)
+  return `${year}-W${String(week).padStart(2, '0')}`
 }
 
 // Grupuje rekordy po tygodniach — ostatnie N tygodni
@@ -30,7 +37,8 @@ function groupByWeek(
 
   for (let i = weeks - 1; i >= 0; i--) {
     const weekStart = new Date(now)
-    weekStart.setDate(now.getDate() - i * 7 - now.getDay())
+    const dayOfWeek = now.getDay() || 7 // 1=pon … 7=nie
+    weekStart.setDate(now.getDate() - i * 7 - (dayOfWeek - 1))
     weekStart.setHours(0, 0, 0, 0)
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekStart.getDate() + 6)
@@ -129,10 +137,11 @@ export default async function DashboardPage() {
       .select('*', { count: 'exact', head: true })
       .neq('status', 'closed'),
 
-    // Kandydaci OLX w tym miesiącu — OLX nie ma created_at, więc zliczamy wszystkich
+    // Kandydaci OLX dodani w tym miesiącu
     supabase
       .from('OLX')
-      .select('*', { count: 'exact', head: true }),
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfMonth),
 
     // Zamówienia w tym miesiącu
     supabase
@@ -212,7 +221,7 @@ export default async function DashboardPage() {
           color="var(--warning)"
         />
         <KpiCard
-          title="Kandydaci OLX"
+          title="Kandydaci OLX (mies.)"
           value={candidatesMonth ?? 0}
           icon={Users}
           color="var(--success)"

@@ -63,7 +63,7 @@ export function CandidatesClient({ initialData, initialCount, canWrite, canEdit 
   const [deleteRow, setDeleteRow] = useState<OLXCandidate | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState('id')
+  const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
