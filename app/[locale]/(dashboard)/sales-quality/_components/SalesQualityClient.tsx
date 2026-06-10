@@ -118,7 +118,7 @@ export function SalesQualityClient({ initialData, initialCount, role, canWrite, 
       ? await supabase.from('Sales Quality').update(payload).eq('id', editRow.id)
       : await supabase.from('Sales Quality').insert(payload)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'sales-quality', editRow?.id ?? null, `Ocena: ${values.clients_name ?? values.phone}`, changes)
     setModalOpen(false); fetchData()
   }

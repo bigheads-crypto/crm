@@ -31,6 +31,7 @@ const logSchema = z.object({
   notes: z.string().optional(),
 })
 
+type CaseFormInput = z.input<typeof caseSchema>
 type CaseFormData = z.infer<typeof caseSchema>
 type LogFormData = z.infer<typeof logSchema>
 
@@ -104,8 +105,8 @@ export function SupportBacklogClient({ initialData, initialCount, role, canWrite
   const [deleteRow, setDeleteRow] = useState<SupportBacklog | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const caseForm = useForm<CaseFormData>({ resolver: zodResolver(caseSchema) })
-  const caseEditForm = useForm<CaseFormData>({ resolver: zodResolver(caseSchema) })
+  const caseForm = useForm<CaseFormInput, unknown, CaseFormData>({ resolver: zodResolver(caseSchema) })
+  const caseEditForm = useForm<CaseFormInput, unknown, CaseFormData>({ resolver: zodResolver(caseSchema) })
   const logForm = useForm<LogFormData>({ resolver: zodResolver(logSchema) })
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => {

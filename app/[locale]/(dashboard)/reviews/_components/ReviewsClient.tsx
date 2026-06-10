@@ -20,7 +20,7 @@ const schema = z.object({
   technik: z.string().min(1, 'Technik jest wymagany'),
   contact: z.string().min(1, 'Numer lub email jest wymagany'),
   channel: z.enum(['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email'], {
-    errorMap: () => ({ message: 'Wybierz kanał wysyłki' }),
+    error: 'Wybierz kanał wysyłki',
   }),
   napisano: z.boolean().optional(),
   napisac: z.boolean().optional(),
@@ -162,7 +162,7 @@ export function ReviewsClient({ initialData, initialCount, role, userName, canWr
       ? await supabase.from('Opinie').update(values).eq('id', editRow.id)
       : await supabase.from('Opinie').insert(values)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'reviews', editRow?.id ?? null, `Opinia: ${values.contact} (${values.channel})`, changes)
     setModalOpen(false); fetchData()
   }

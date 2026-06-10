@@ -108,7 +108,7 @@ export function SupportCasesClient({ initialData, initialCount, role, canWrite, 
       ? await supabase.from('Support Case').update(values).eq('id', editRow.id)
       : await supabase.from('Support Case').insert(values)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'support-cases', editRow?.id ?? null, `Sprawa: ${values.clients_name ?? values.phone}`, changes)
     setModalOpen(false); fetchData()
   }

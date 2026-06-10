@@ -7,13 +7,14 @@ export interface ActivityChange {
 }
 
 export function computeChanges(
-  oldRow: Record<string, unknown>,
+  oldRow: object,
   newValues: Record<string, unknown>
 ): ActivityChange[] {
+  const prev = oldRow as Record<string, unknown>
   return Object.entries(newValues)
-    .filter(([key]) => key in oldRow)
-    .filter(([key, val]) => String(oldRow[key] ?? '') !== String(val ?? ''))
-    .map(([key, val]) => ({ field: key, from: oldRow[key], to: val }))
+    .filter(([key]) => key in prev)
+    .filter(([key, val]) => String(prev[key] ?? '') !== String(val ?? ''))
+    .map(([key, val]) => ({ field: key, from: prev[key], to: val }))
 }
 
 export async function logActivity(

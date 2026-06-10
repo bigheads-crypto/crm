@@ -115,7 +115,7 @@ export function SalesDealsClient({ initialData, initialCount, role, canWrite, ca
       ? await supabase.from('Sales Deals').update(values).eq('id', editRow.id)
       : await supabase.from('Sales Deals').insert(values)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'sales-deals', editRow?.id ?? null, `Transakcja: ${values.client_name ?? values.phone}`, changes)
     setModalOpen(false)
     fetchData()

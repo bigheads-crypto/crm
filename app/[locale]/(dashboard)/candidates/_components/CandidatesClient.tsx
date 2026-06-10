@@ -105,7 +105,7 @@ export function CandidatesClient({ initialData, initialCount, role, canWrite, ca
       ? await supabase.from('OLX').update(payload).eq('id', editRow.id)
       : await supabase.from('OLX').insert(payload)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'candidates', editRow?.id ?? null, `Kandydat: ${values.name}`, changes)
     setModalOpen(false); fetchData()
   }

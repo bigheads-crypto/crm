@@ -80,7 +80,7 @@ export function MachineIssuesClient({ initialData, initialCount, role, canWrite,
       ? await supabase.from('Machine Issues').update(payload).eq('id', editRow.id)
       : await supabase.from('Machine Issues').insert(payload)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'machine-issues', editRow?.id ?? null, `Problem: ${values.model} (${values.year ?? '—'})`, changes)
     setModalOpen(false); fetchData()
   }

@@ -101,7 +101,7 @@ export function MachinesClient({ initialData, initialCount, role, canWrite, canE
       ? await supabase.from('Machines').update(payload).eq('id', editRow.id)
       : await supabase.from('Machines').insert(payload)
     if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    const changes = editRow ? computeChanges(editRow as Record<string, unknown>, values) : undefined
+    const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'machines', editRow?.id ?? null, `Maszyna: ${values.brand ?? ''} ${values.model ?? ''}`.trim(), changes)
     setModalOpen(false); fetchData()
   }
