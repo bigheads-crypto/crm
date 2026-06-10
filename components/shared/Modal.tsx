@@ -47,6 +47,9 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             animation: 'contentShow 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             outline: 'none',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: 'calc(100dvh - 48px)',
           }}
         >
           {/* Linia akcentu na górze */}
@@ -83,7 +86,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
           </div>
 
           {/* Zawartość */}
-          <div className="px-5 py-4">{children}</div>
+          <div className="px-5 py-4" style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>{children}</div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

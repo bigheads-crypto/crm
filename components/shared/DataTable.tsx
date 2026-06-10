@@ -169,12 +169,27 @@ export function DataTable<T extends Record<string, unknown>>({
     const th = thRefs.current[colKey]
     if (!th) return
     const startWidth = th.offsetWidth
+
+    const colIdx = columns.findIndex(c => String(c.key) === colKey)
+    const nextCol = columns[colIdx + 1]
+    const nextKey = nextCol ? String(nextCol.key) : null
+    const nextTh = nextKey ? thRefs.current[nextKey] : null
+    const nextStartWidth = nextTh ? nextTh.offsetWidth : null
+
     resizingRef.current = { key: colKey, startX: e.clientX, startWidth }
     const onMove = (ev: MouseEvent) => {
       if (!resizingRef.current) return
       const { key, startWidth, startX } = resizingRef.current
-      const newWidth = Math.max(60, startWidth + ev.clientX - startX)
-      setColWidths(prev => ({ ...prev, [key]: newWidth }))
+      const delta = ev.clientX - startX
+      const newWidth = Math.max(60, startWidth + delta)
+      const actualDelta = newWidth - startWidth
+      setColWidths(prev => {
+        const updates: Record<string, number> = { ...prev, [key]: newWidth }
+        if (nextKey !== null && nextStartWidth !== null) {
+          updates[nextKey] = Math.max(60, nextStartWidth - actualDelta)
+        }
+        return updates
+      })
     }
     const onUp = () => {
       resizingRef.current = null
@@ -337,13 +352,16 @@ export function DataTable<T extends Record<string, unknown>>({
                     <div
                       onMouseDown={e => startResize(e, colKey)}
                       style={{
-                        position: 'absolute', right: 0, top: 0, bottom: 0, width: '5px',
+                        position: 'absolute', right: 0, top: 4, bottom: 4, width: '8px',
                         cursor: 'col-resize', zIndex: 1,
-                        borderRight: '2px solid transparent',
-                        transition: 'border-color 0.15s',
+                        background: 'linear-gradient(to right, transparent 3px, rgba(255,255,255,0.18) 3px, rgba(255,255,255,0.18) 5px, transparent 5px)',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.borderRightColor = 'var(--accent)')}
-                      onMouseLeave={e => (e.currentTarget.style.borderRightColor = 'transparent')}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = 'linear-gradient(to right, transparent 3px, var(--accent) 3px, var(--accent) 5px, transparent 5px)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'linear-gradient(to right, transparent 3px, rgba(255,255,255,0.18) 3px, rgba(255,255,255,0.18) 5px, transparent 5px)'
+                      }}
                     />
                   </th>
                 )
@@ -402,16 +420,14 @@ export function DataTable<T extends Record<string, unknown>>({
                     {columns.map((col) => {
                       const value = row[col.key as keyof T]
                       return (
-                        <td
-                          key={String(col.key)}
-                          className="px-4 py-3"
-                          style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        >
-                          {col.render
-                            ? col.render(value, row)
-                            : value == null
-                            ? <span style={{ color: 'var(--text-dim)' }}>—</span>
-                            : String(value)}
+                        <td key={String(col.key)} className="px-4 py-3">
+                          <div style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {col.render
+                              ? col.render(value, row)
+                              : value == null
+                              ? <span style={{ color: 'var(--text-dim)' }}>—</span>
+                              : String(value)}
+                          </div>
                         </td>
                       )
                     })}

@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity } from '@/lib/activity-log'
 import type { SupportBacklog, SupportBacklogLog } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 import { PlusCircle, ChevronDown, ChevronUp, Link2, Search, Plus, RefreshCw } from 'lucide-react'
 
 const caseSchema = z.object({
@@ -36,8 +37,6 @@ type CaseFormData = z.infer<typeof caseSchema>
 type LogFormData = z.infer<typeof logSchema>
 
 const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'resolved', 'closed']
-const PAGE_SIZE = 25
-
 const STATUS_COLORS: Record<string, string> = {
   open: '#ef4444',
   pending: '#f59e0b',

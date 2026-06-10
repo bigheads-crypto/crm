@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SupportLog } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   phone: z.string().optional(),
@@ -29,8 +30,6 @@ const schema = z.object({
   full_transcript: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 interface Props { initialData: SupportLog[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 

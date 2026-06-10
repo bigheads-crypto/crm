@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { OLXCandidate } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   name: z.string().min(1, 'Wymagane'),
@@ -27,8 +28,6 @@ const schema = z.object({
   description: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 function ScoreBadge({ value }: { value: number | null }) {
   if (value == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>

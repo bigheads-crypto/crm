@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SalesQuality } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
@@ -27,8 +28,6 @@ const schema = z.object({
   deal_id: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 function RatingBadge({ rating }: { rating: number }) {
   const color = rating >= 7 ? '#22c55e' : rating >= 4 ? '#f59e0b' : '#ef4444'

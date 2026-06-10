@@ -14,14 +14,13 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Sale, Product, Role } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const PAYMENT_OPTIONS = ['PayPal', 'przelew']
 const STATUS_OPTIONS = ['new', 'processing', 'shipped', 'delivered', 'cancelled']
 const STATUS_COLORS: Record<string, string> = {
   new: '#e07818', processing: '#f59e0b', shipped: '#a855f7', delivered: '#22c55e', cancelled: '#ef4444',
 }
-const PAGE_SIZE = 25
-
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
   client_name: z.string().optional(),

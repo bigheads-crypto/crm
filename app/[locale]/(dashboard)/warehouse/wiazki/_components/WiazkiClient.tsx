@@ -15,14 +15,13 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Wiazka } from '@/lib/supabase/types'
+import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
 const PRODUCT_LINE_OPTIONS = ['4DPF', 'comfylock']
 const PRODUCT_LINE_COLORS: Record<string, string> = {
   '4DPF': '#e07818',
   'comfylock': '#a855f7',
 }
-
-const PAGE_SIZE = 50
 
 type FormData = {
   product_line: string

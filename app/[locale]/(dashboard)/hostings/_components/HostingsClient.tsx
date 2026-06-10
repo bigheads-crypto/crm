@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import type { Hosting } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   description: z.string().optional(),
@@ -20,8 +21,6 @@ const schema = z.object({
   due_date: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 interface Props { initialData: Hosting[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 

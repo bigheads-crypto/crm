@@ -58,6 +58,40 @@ Pełna paleta + status colors w `DOCS.md`.
 5. DataTable dostaje `columnFilters` + `onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}`.
 6. Po każdym CRUD-zie wywołuj `fetchData()`.
 
+## Shared komponenty — zasada twarda
+
+Jeśli piszesz **komponent React** używany w więcej niż jednym module — **trafia do `components/shared/`**, nie zostaje lokalny.
+
+```
+// ✅ Nowy badge statusu używany w 2+ miejscach
+components/shared/StatusBadge.tsx
+
+// ❌ Lokalny komponent w jednym module, który potem duplikujesz
+app/[locale]/(dashboard)/sales/_components/StatusBadge.tsx
+```
+
+Co już jest w `components/shared/`: `DataTable`, `Modal`, `ConfirmDialog`, `Pagination`, `Badge`, `forms`, `PageHeader`, `ThemeProvider`. Przed napisaniem nowego komponentu sprawdź czy nie ma tam już gotowego.
+
+> **`components/shared/` = tylko pliki `.tsx` (komponenty React). Stałe TS, helpery, typy — NIE tutaj.**
+
+## Stałe konfiguracyjne — zasada twarda
+
+Stałe i helpery używane w więcej niż jednym pliku **nie mogą być duplikowane** — trafiają do `lib/`:
+
+- **`PAGE_SIZE`** / **`PAGE_SIZE_LARGE`** (rozmiar strony w paginacji) → `lib/constants.ts`
+- **`role labels`** (nazwy ról po polsku/angielsku) → `i18n/pl.json` + `i18n/en.json`
+- **Status colors / status labels** (kolory i etykiety statusów per moduł) → `lib/constants.ts` lub namespace w `i18n/`
+
+```ts
+// ✅ lib/constants.ts  ← stałe TS, nie components/shared/
+export const PAGE_SIZE = 25
+export const PAGE_SIZE_LARGE = 50
+
+// ❌ każdy *Client.tsx z własnym const PAGE_SIZE = 25
+```
+
+Podział jest ostry: `components/shared/` → React, `lib/` → logika/stałe/typy TS.
+
 ## CRUD — obsługa błędów
 
 Każdy `insert/update/delete` na Supabase **musi** sprawdzać `{ error }`. Nie zostawiaj cichych awarii (RLS może odrzucić, użytkownik zobaczy „sukces"). Patrz TODO.md pkt 5.

@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SupportCase } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
@@ -30,8 +31,6 @@ type FormData = z.infer<typeof schema>
 
 const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'resolved', 'closed']
 const STATUS_COLORS: Record<string, string> = { open: '#ef4444', pending: '#f59e0b', in_progress: '#e07818', resolved: '#22c55e', closed: '#6b7280' }
-const PAGE_SIZE = 25
-
 interface Props { initialData: SupportCase[]; initialCount: number; canWrite: boolean; canEdit: boolean }
 
 export function SupportCasesClient({ initialData, initialCount, canWrite, canEdit }: Props) {

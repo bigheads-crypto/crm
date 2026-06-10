@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { MachineIssue } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   model: z.string().min(1, 'Model jest wymagany'),
@@ -20,8 +21,6 @@ const schema = z.object({
   problem: z.string().min(1, 'Opis problemu jest wymagany'),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 const COLUMNS: Column<MachineIssue>[] = [
   { key: 'model', header: 'Model maszyny', sortable: true, filterable: true },

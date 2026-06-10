@@ -14,6 +14,7 @@ import { DirectionBadge } from '@/components/shared/Badge'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SupportTextLog } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   phone: z.string().optional(),
@@ -23,8 +24,6 @@ const schema = z.object({
   case_id: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 const COLUMNS: Column<SupportTextLog>[] = [
   { key: 'phone', header: 'Telefon' },

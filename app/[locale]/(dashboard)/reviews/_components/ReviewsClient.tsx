@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Review } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const CHANNELS = ['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email'] as const
 
@@ -28,8 +29,6 @@ const schema = z.object({
   google_name: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 const CHANNEL_COLORS: Record<string, string> = {
   'Telefon': '#10a872',

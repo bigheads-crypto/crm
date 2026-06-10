@@ -6,6 +6,7 @@ import { Pagination } from '@/components/shared/Pagination'
 import { Modal } from '@/components/shared/Modal'
 import { PageHeader } from '@/components/shared/PageHeader'
 import type { ActivityChange } from '@/lib/activity-log'
+import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
 interface ActivityLog {
   id: number
@@ -35,8 +36,6 @@ function parseDetails(details: string | null): ParsedDetails | null {
     return null
   }
 }
-
-const PAGE_SIZE = 50
 
 const ACTION_LABELS: Record<string, string> = {
   create: 'Dodanie',

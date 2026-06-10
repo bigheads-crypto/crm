@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Product } from '@/lib/supabase/types'
+import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
 const CATEGORY_OPTIONS = ['emulator', 'rura', 'pompa', 'inne']
 const CATEGORY_COLORS: Record<string, string> = {
@@ -23,8 +24,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   pompa: '#3b82f6',
   inne: '#6b7280',
 }
-const PAGE_SIZE = 50
-
 type FormData = {
   name: string
   plytka?: string

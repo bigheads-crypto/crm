@@ -14,8 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Zestaw } from '@/lib/supabase/types'
-
-const PAGE_SIZE = 50
+import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
 type FormData = {
   nr: string
@@ -68,12 +67,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     {
       key: 'emulator_program', header: t('zestawy.colEmulatorProgram'), width: '240px', filterable: true,
       render: (v) => v ? (
-        <span title={String(v)} style={{
-          display: 'block', overflow: 'hidden', textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap', maxWidth: '230px', fontSize: '12px',
-        }}>
-          {String(v)}
-        </span>
+        <span title={String(v)} style={{ fontSize: '12px' }}>{String(v)}</span>
       ) : '—',
     },
     { key: 'wiazka', header: t('zestawy.colWiazka'), width: '160px', filterable: true },

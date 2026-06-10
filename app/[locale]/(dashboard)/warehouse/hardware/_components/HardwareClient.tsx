@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Hardware } from '@/lib/supabase/types'
+import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
 const COMPONENT_TYPE_OPTIONS = ['płytka surowa', 'płytka zaprogramowana', 'obudowa']
 const COMPONENT_TYPE_COLORS: Record<string, string> = {
@@ -22,8 +23,6 @@ const COMPONENT_TYPE_COLORS: Record<string, string> = {
   'płytka zaprogramowana': '#e07818',
   'obudowa': '#3b82f6',
 }
-
-const PAGE_SIZE = 50
 
 type FormData = {
   component_type: string

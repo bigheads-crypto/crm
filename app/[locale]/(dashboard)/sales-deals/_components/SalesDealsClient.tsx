@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { SalesDeal } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   phone: z.string().min(1, 'Wymagane'),
@@ -32,8 +33,6 @@ const STATUS_OPTIONS = ['open', 'pending', 'in_progress', 'closed']
 const STATUS_COLORS: Record<string, string> = {
   open: '#22c55e', pending: '#f59e0b', in_progress: '#e07818', closed: '#6b7280',
 }
-const PAGE_SIZE = 25
-
 interface Props {
   initialData: SalesDeal[]
   initialCount: number

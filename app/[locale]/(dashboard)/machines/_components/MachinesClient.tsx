@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Machine, Role } from '@/lib/supabase/types'
+import { PAGE_SIZE } from '@/lib/constants'
 
 const schema = z.object({
   brand: z.string().optional(),
@@ -30,8 +31,6 @@ const schema = z.object({
   return_status: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-const PAGE_SIZE = 25
 
 function BoolBadge({ value }: { value: boolean | null }) {
   if (value == null) return <span style={{ color: 'var(--text-dim)' }}>—</span>
