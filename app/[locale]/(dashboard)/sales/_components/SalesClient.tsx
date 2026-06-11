@@ -13,7 +13,7 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Sale, Product, Role } from '@/lib/supabase/types'
+import type { Sale, SaleItem, Zestaw, Role } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
 
 const PAYMENT_OPTIONS = ['PayPal', 'przelew']
@@ -31,7 +31,6 @@ const schema = z.object({
   salesman: z.string().optional(),
   first_contact: z.string().optional(),
   sale_status: z.string().optional(),
-  product_id: z.string().optional(),
   quantity: z.string().optional(),
   price: z.string().optional(),
   shipping_cost: z.string().optional(),
@@ -125,7 +124,16 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [salesmen, setSalesmen] = useState<string[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const [zestawy, setZestawy] = useState<Zestaw[]>([])
+  type ItemRow = { zestaw_id: string; quantity: string; price: string }
+  const [formItems, setFormItems] = useState<ItemRow[]>([])
+  const [itemsMap, setItemsMap] = useState<Record<number, SaleItem[]>>({})
+
+  function addItem() { setFormItems(prev => [...prev, { zestaw_id: '', quantity: '1', price: '' }]) }
+  function removeItem(i: number) { setFormItems(prev => prev.filter((_, idx) => idx !== i)) }
+  function updateItem(i: number, field: keyof ItemRow, value: string) {
+    setFormItems(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: value } : item))
+  }
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
@@ -134,19 +142,15 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     Promise.all([
       supabase.from('Sales').select('salesman').not('salesman', 'is', null)
         .then(({ data: s }) => setSalesmen([...new Set((s ?? []).map(r => r.salesman).filter(Boolean) as string[])].sort())),
-      supabase.from('Products').select('*').order('category').order('name')
-        .then(({ data: p }) => setProducts(p ?? [])),
+      supabase.from('Zestawy').select('*').order('nr', { ascending: true })
+        .then(({ data: z }) => setZestawy(z ?? [])),
     ])
   }, [])
 
-  const productMap = useMemo(() =>
-    Object.fromEntries(products.map(p => [p.id, p])),
-    [products]
+  const zestawMap = useMemo(() =>
+    Object.fromEntries(zestawy.map(z => [z.id, z])),
+    [zestawy]
   )
-
-  const emulators = useMemo(() => products.filter(p => p.category === 'emulator'), [products])
-  const pipes = useMemo(() => products.filter(p => p.category === 'rura'), [products])
-  const others = useMemo(() => products.filter(p => !['emulator', 'rura'].includes(p.category ?? '')), [products])
 
   const columns = useMemo<Column<Sale>[]>(() => [
     { key: 'phone', header: 'Telefon', width: '130px' },
@@ -159,8 +163,19 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       filterOptions: STATUS_OPTIONS,
     },
     {
-      key: 'product_id', header: 'Produkt', filterable: false,
-      render: (v) => v ? (productMap[Number(v)]?.name ?? `#${v}`) : '—',
+      key: 'zestaw_id', header: 'Zestawy', filterable: false, sortable: false,
+      render: (_v, row) => {
+        const items = itemsMap[(row as unknown as Sale).id] ?? []
+        if (items.length === 0) return '—'
+        return (
+          <span style={{ fontSize: '12px' }}>
+            {items.map(item => {
+              const z = zestawMap[item.zestaw_id ?? 0]
+              return z ? `#${z.nr} ${z.name}` : `#${item.zestaw_id}`
+            }).join(', ')}
+          </span>
+        )
+      },
     },
     {
       key: 'total', header: 'Total', filterable: false, width: '90px',
@@ -171,7 +186,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       key: 'created_at', header: 'Data', filterable: false, width: '100px',
       render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—',
     },
-  ], [salesmen, productMap])
+  ], [salesmen, zestawMap, itemsMap])
 
   const canDelete = canEdit
 
@@ -215,13 +230,36 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total } = await query
-    setData(rows ?? []); setCount(total ?? 0); setLoading(false)
+    setData(rows ?? [])
+    setCount(total ?? 0)
+    if (rows && rows.length > 0) {
+      const { data: items } = await supabase
+        .from('Sales Items')
+        .select('*')
+        .in('sale_id', rows.map(r => r.id))
+      const map: Record<number, SaleItem[]> = {}
+      for (const item of (items ?? [])) {
+        if (!map[item.sale_id]) map[item.sale_id] = []
+        map[item.sale_id].push(item)
+      }
+      setItemsMap(map)
+    } else {
+      setItemsMap({})
+    }
+    setLoading(false)
   }, [page, columnFilters, filter, sortKey, sortDir])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setAutofilled(false); setModalOpen(true) }
-  const openEdit = (row: Sale) => {
+  const openAdd = () => {
+    reset({})
+    setEditRow(null)
+    setFormError(null)
+    setAutofilled(false)
+    setFormItems([{ zestaw_id: '', quantity: '1', price: '' }])
+    setModalOpen(true)
+  }
+  const openEdit = async (row: Sale) => {
     reset({
       phone: row.phone ?? '',
       client_name: row.client_name ?? '',
@@ -232,7 +270,6 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       salesman: row.salesman ?? '',
       first_contact: row.first_contact ?? '',
       sale_status: row.sale_status ?? '',
-      product_id: row.product_id != null ? String(row.product_id) : '',
       quantity: row.quantity != null ? String(row.quantity) : '',
       price: row.price != null ? String(row.price) : '',
       shipping_cost: row.shipping_cost != null ? String(row.shipping_cost) : '',
@@ -244,7 +281,24 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       invoice_details: row.invoice_details ?? '',
       notes: row.notes ?? '',
     })
-    setEditRow(row); setFormError(null); setModalOpen(true)
+    const supabase = createClient()
+    const { data: items } = await supabase
+      .from('Sales Items')
+      .select('*')
+      .eq('sale_id', row.id)
+      .order('id', { ascending: true })
+    setFormItems(
+      (items ?? []).length > 0
+        ? (items ?? []).map(item => ({
+            zestaw_id: item.zestaw_id != null ? String(item.zestaw_id) : '',
+            quantity: String(item.quantity),
+            price: item.price != null ? String(item.price) : '',
+          }))
+        : [{ zestaw_id: '', quantity: '1', price: '' }]
+    )
+    setEditRow(row)
+    setFormError(null)
+    setModalOpen(true)
   }
 
   const onSubmit = async (values: FormData) => {
@@ -259,7 +313,6 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       salesman: values.salesman || null,
       first_contact: values.first_contact || null,
       sale_status: values.sale_status || null,
-      product_id: values.product_id ? Number(values.product_id) : null,
       quantity: values.quantity ? Number(values.quantity) : null,
       price: values.price ? Number(values.price) : null,
       shipping_cost: values.shipping_cost ? Number(values.shipping_cost) : null,
@@ -271,13 +324,36 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       invoice_details: values.invoice_details || null,
       notes: values.notes || null,
     }
-    const { error } = editRow
-      ? await supabase.from('Sales').update(payload).eq('id', editRow.id)
-      : await supabase.from('Sales').insert(payload)
-    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+
+    let saleId: number
+    if (editRow) {
+      const { error } = await supabase.from('Sales').update(payload).eq('id', editRow.id)
+      if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+      saleId = editRow.id
+    } else {
+      const { data: saved, error } = await supabase.from('Sales').insert(payload).select('id').single()
+      if (error || !saved) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+      saleId = saved.id
+    }
+
+    // Zapisz pozycje: usuń stare, wstaw nowe
+    await supabase.from('Sales Items').delete().eq('sale_id', saleId)
+    const validItems = formItems.filter(item => item.zestaw_id)
+    if (validItems.length > 0) {
+      await supabase.from('Sales Items').insert(
+        validItems.map(item => ({
+          sale_id: saleId,
+          zestaw_id: Number(item.zestaw_id),
+          quantity: Number(item.quantity) || 1,
+          price: item.price ? Number(item.price) : null,
+        }))
+      )
+    }
+
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
-    void logActivity(supabase, editRow ? 'update' : 'create', 'sales', editRow?.id ?? null, `Zamówienie: ${values.company ?? values.phone}`, changes)
-    setModalOpen(false); fetchData()
+    void logActivity(supabase, editRow ? 'update' : 'create', 'sales', saleId, `Zamówienie: ${values.company ?? values.phone}`, changes)
+    setModalOpen(false)
+    fetchData()
   }
 
   const onDelete = async () => {
@@ -304,7 +380,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
         onAdd={canWrite ? openAdd : undefined}
-        onEdit={canEdit ? (row) => openEdit(row as unknown as Sale) : undefined}
+        onEdit={canEdit ? (row) => { void openEdit(row as unknown as Sale) } : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Sale) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj zamówienie"
         sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
@@ -350,38 +426,61 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
           </FormField>
           <FormField label="Ilość"><input {...register('quantity')} type="number" min="1" style={inputStyle} /></FormField>
           <div className="col-span-2">
-            <FormField label="Produkt">
-              <select {...register('product_id')} style={inputStyle}>
-                <option value="">— wybierz produkt —</option>
-                {emulators.length > 0 && (
-                  <optgroup label="Emulatory">
-                    {emulators.map(p => (
-                      <option key={p.id} value={String(p.id)}>
-                        {p.name} (Stan: {p.stock_qty})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {pipes.length > 0 && (
-                  <optgroup label="Rury">
-                    {pipes.map(p => (
-                      <option key={p.id} value={String(p.id)}>
-                        {p.name} (Stan: {p.stock_qty})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {others.length > 0 && (
-                  <optgroup label="Inne">
-                    {others.map(p => (
-                      <option key={p.id} value={String(p.id)}>
-                        {p.name} (Stan: {p.stock_qty})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </FormField>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+              Pozycje zamówienia
+            </div>
+            <div className="flex flex-col gap-2">
+              {formItems.map((item, i) => (
+                <div key={i} className="flex gap-2 items-end">
+                  <div style={{ flex: '1 1 0' }}>
+                    {i === 0 && <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Zestaw</label>}
+                    <select
+                      value={item.zestaw_id}
+                      onChange={e => updateItem(i, 'zestaw_id', e.target.value)}
+                      style={inputStyle}
+                    >
+                      <option value="">— wybierz zestaw —</option>
+                      {zestawy.map(z => (
+                        <option key={z.id} value={String(z.id)}>#{z.nr} {z.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ width: '72px' }}>
+                    {i === 0 && <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Ilość</label>}
+                    <input
+                      type="number" min="1" value={item.quantity}
+                      onChange={e => updateItem(i, 'quantity', e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ width: '90px' }}>
+                    {i === 0 && <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cena (€)</label>}
+                    <input
+                      type="number" step="0.01" value={item.price}
+                      onChange={e => updateItem(i, 'price', e.target.value)}
+                      style={inputStyle}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {formItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeItem(i)}
+                      style={{ padding: '6px 10px', borderRadius: '8px', backgroundColor: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontSize: '13px', marginBottom: '1px' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addItem}
+                style={{ alignSelf: 'flex-start', marginTop: '4px', padding: '5px 12px', borderRadius: '8px', fontSize: '13px', backgroundColor: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)' }}
+              >
+                + Dodaj pozycję
+              </button>
+            </div>
           </div>
 
           <FormSection title="Płatność" />

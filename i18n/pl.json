@@ -216,6 +216,7 @@
   },
   "warehouse": {
     "required": "Wymagane",
+    "cancel": "Anuluj",
     "selectPlaceholder": "— wybierz —",
     "saveError": "Błąd zapisu. Spróbuj ponownie.",
     "deleteError": "Błąd usuwania. Spróbuj ponownie.",
@@ -230,16 +231,17 @@
       "colName": "Nazwa",
       "colPlytka": "Płytka",
       "colProgram": "Program",
+      "colObudowa": "Obudowa",
       "colStock": "Stan",
-      "colCategory": "Typ",
       "colNotes": "Notatki",
       "fieldName": "Nazwa",
-      "fieldPlytka": "Płytka",
-      "fieldCategory": "Kategoria",
-      "fieldProgram": "Program (wersja firmware)",
+      "fieldPlytka": "Płytka zaprogramowana",
+      "fieldObudowa": "Obudowa",
       "fieldStock": "Stan magazynowy",
       "fieldPrice": "Cena domyślna (€)",
-      "fieldNotes": "Notatki"
+      "fieldNotes": "Notatki",
+      "stockErrorBoard": "Niewystarczający stan płytki zaprogramowanej (dostępne: {max} szt.)",
+      "stockErrorObudowa": "Niewystarczający stan obudowy (dostępne: {max} szt.)"
     },
     "hardware": {
       "title": "Hardware",
@@ -256,7 +258,19 @@
       "fieldType": "Typ komponentu",
       "fieldName": "Nazwa",
       "fieldStock": "Stan magazynowy",
-      "fieldNotes": "Notatki"
+      "fieldNotes": "Notatki",
+      "colProgram": "Program",
+      "programBtn": "Zaprogramuj",
+      "programModal": "Zaprogramuj płytki",
+      "programFieldBoard": "Płytka surowa",
+      "programFieldProgram": "Program do wgrania",
+      "programFieldQty": "Ilość do zaprogramowania",
+      "programSelectBoard": "Wybierz płytkę...",
+      "programSelectProgram": "Wybierz program...",
+      "programNoBoardsAvailable": "Brak płytek surowych w magazynie",
+      "programNoProgramsAvailable": "Brak programów dla tej płytki",
+      "programErrorQty": "Ilość przekracza stan magazynowy ({max} szt.)",
+      "programErrorSave": "Błąd podczas zapisywania"
     },
     "software": {
       "title": "Software",

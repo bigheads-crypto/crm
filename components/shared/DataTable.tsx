@@ -33,6 +33,7 @@ export interface DataTableProps<T> {
   canEdit?: boolean
   canDelete?: boolean
   addLabel?: string
+  extraActions?: React.ReactNode
   keyExtractor?: (row: T) => string | number
   sortKey?: string
   sortDir?: 'asc' | 'desc'
@@ -72,6 +73,7 @@ export function DataTable<T extends Record<string, unknown>>({
   canEdit = true,
   canDelete = false,
   addLabel = 'Dodaj',
+  extraActions,
   keyExtractor,
   sortKey,
   sortDir,
@@ -222,14 +224,19 @@ export function DataTable<T extends Record<string, unknown>>({
             </button>
           )}
         </div>
-        {onAdd && (
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
-            style={{ backgroundColor: 'var(--accent)', color: '#ffffff' }}
-          >
-            <Plus size={14} /> {addLabel}
-          </button>
+        {(extraActions || onAdd) && (
+          <div className="flex items-center gap-2">
+            {extraActions}
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
+                style={{ backgroundColor: 'var(--accent)', color: '#ffffff' }}
+              >
+                <Plus size={14} /> {addLabel}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

@@ -10,25 +10,17 @@ import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Product } from '@/lib/supabase/types'
+import type { Product, Hardware } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
-const CATEGORY_OPTIONS = ['emulator', 'rura', 'pompa', 'inne']
-const CATEGORY_COLORS: Record<string, string> = {
-  emulator: '#a855f7',
-  rura: '#e07818',
-  pompa: '#3b82f6',
-  inne: '#6b7280',
-}
 type FormData = {
   name: string
   plytka?: string
   program?: string
-  category?: string
+  obudowa?: string
   stock_qty?: string
   price_default?: string
   notes?: string
@@ -64,29 +56,35 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
   const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [plytkaOptions, setPlytkaOptions] = useState<string[]>([])
+  const [programmedBoards, setProgrammedBoards] = useState<Hardware[]>([])
+  const [obudowaOptions, setObudowaOptions] = useState<string[]>([])
+  const [selectedHwBoard, setSelectedHwBoard] = useState<Hardware | null>(null)
 
   useEffect(() => {
-    async function loadOptions() {
+    async function loadHardwareOptions() {
       const supabase = createClient()
-      const { data: rows } = await supabase
-        .from('Products')
-        .select('plytka')
-        .not('plytka', 'is', null)
-      setPlytkaOptions(
-        [...new Set((rows ?? []).map(r => r.plytka).filter(Boolean) as string[])].sort()
-      )
+      const [{ data: boards }, { data: obudowy }] = await Promise.all([
+        supabase.from('Hardware').select('*').eq('component_type', 'płytka zaprogramowana').order('name'),
+        supabase.from('Hardware').select('name').eq('component_type', 'obudowa').order('name'),
+      ])
+      setProgrammedBoards(boards ?? [])
+      setObudowaOptions((obudowy ?? []).map(r => r.name).filter(Boolean) as string[])
     }
-    loadOptions()
+    loadHardwareOptions()
   }, [])
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
+  const plytkaFilterOptions = useMemo(
+    () => [...new Set(programmedBoards.map(b => b.name))].sort(),
+    [programmedBoards]
+  )
+
   const columns = useMemo<Column<Product>[]>(() => [
     { key: 'name', header: t('emulatory.colName'), sortable: true, filterable: true },
     {
-      key: 'plytka', header: t('emulatory.colPlytka'), width: '180px', sortable: true,
-      filterOptions: plytkaOptions,
+      key: 'plytka', header: t('emulatory.colPlytka'), width: '160px', sortable: true,
+      filterOptions: plytkaFilterOptions,
       render: (v) => v ? (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{String(v)}</span>
       ) : '—',
@@ -100,13 +98,15 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
       ) : '—',
     },
     {
-      key: 'stock_qty', header: t('emulatory.colStock'), width: '80px', sortable: true, filterable: false,
-      render: (v) => <StockBadge qty={Number(v ?? 0)} />,
+      key: 'obudowa', header: t('emulatory.colObudowa'), width: '160px', sortable: true,
+      filterOptions: obudowaOptions,
+      render: (v) => v ? (
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{String(v)}</span>
+      ) : '—',
     },
     {
-      key: 'category', header: t('emulatory.colCategory'), width: '110px', sortable: true,
-      render: (v) => v ? <StatusBadge status={String(v)} colors={CATEGORY_COLORS} /> : '—',
-      filterOptions: CATEGORY_OPTIONS,
+      key: 'stock_qty', header: t('emulatory.colStock'), width: '80px', sortable: true, filterable: false,
+      render: (v) => <StockBadge qty={Number(v ?? 0)} />,
     },
     { key: 'notes', header: t('emulatory.colNotes'), filterable: false,
       render: (v) => v ? (
@@ -115,19 +115,19 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
         </span>
       ) : '—',
     },
-  ], [plytkaOptions, t])
+  ], [plytkaFilterOptions, obudowaOptions, t])
 
   const schema = z.object({
     name: z.string().min(1, t('required')),
     plytka: z.string().optional(),
     program: z.string().optional(),
-    category: z.string().optional(),
+    obudowa: z.string().optional(),
     stock_qty: z.string().optional(),
     price_default: z.string().optional(),
     notes: z.string().optional(),
   })
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
@@ -146,7 +146,8 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({ name: '', plytka: '', program: '', category: '', stock_qty: '0', price_default: '', notes: '' })
+    reset({ name: '', plytka: '', program: '', obudowa: '', stock_qty: '1', price_default: '', notes: '' })
+    setSelectedHwBoard(null)
     setEditRow(null)
     setFormError(null)
     setModalOpen(true)
@@ -157,11 +158,13 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
       name: row.name,
       plytka: row.plytka ?? '',
       program: row.program ?? '',
-      category: row.category ?? '',
+      obudowa: row.obudowa ?? '',
       stock_qty: String(row.stock_qty),
       price_default: row.price_default != null ? String(row.price_default) : '',
       notes: row.notes ?? '',
     })
+    const matchingBoard = programmedBoards.find(b => b.name === row.plytka && b.program === row.program) ?? null
+    setSelectedHwBoard(matchingBoard)
     setEditRow(row)
     setFormError(null)
     setModalOpen(true)
@@ -169,21 +172,79 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
 
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
+    const newQty = values.stock_qty ? Number(values.stock_qty) : 0
+    const newPlytka = values.plytka || null
+    const newProgram = values.program || null
+    const newObudowa = values.obudowa || null
+
     const payload = {
       name: values.name,
-      plytka: values.plytka || null,
-      program: values.program || null,
-      category: values.category || null,
-      stock_qty: values.stock_qty ? Number(values.stock_qty) : 0,
+      plytka: newPlytka,
+      program: newProgram,
+      obudowa: newObudowa,
+      category: 'emulator',
+      stock_qty: newQty,
       price_default: values.price_default ? Number(values.price_default) : null,
       notes: values.notes || null,
     }
-    const { error } = editRow
-      ? await supabase.from('Products').update(payload).eq('id', editRow.id)
-      : await supabase.from('Products').insert(payload)
-    if (error) { setFormError(t('saveError')); return }
+
+    // Helper — szuka wpisu Hardware dla płytki lub obudowy
+    const fetchBoard = async (plytka: string, program: string | null) => {
+      const q = supabase.from('Hardware').select('id, stock_qty')
+        .eq('component_type', 'płytka zaprogramowana').eq('name', plytka)
+      const { data } = program
+        ? await q.eq('program', program).maybeSingle()
+        : await q.is('program', null).maybeSingle()
+      return data
+    }
+    const fetchOb = async (name: string) => {
+      const { data } = await supabase.from('Hardware').select('id, stock_qty')
+        .eq('component_type', 'obudowa').eq('name', name).maybeSingle()
+      return data
+    }
+
+    // Ile sztuk faktycznie montujemy teraz
+    const diff = editRow ? newQty - editRow.stock_qty : newQty
+
+    if (diff > 0) {
+      // Walidacja — sprawdź czy wystarczy komponentów na RÓŻNICĘ (lub pełną ilość przy tworzeniu)
+      const [boardHw, obHw] = await Promise.all([
+        newPlytka  ? fetchBoard(newPlytka, newProgram) : null,
+        newObudowa ? fetchOb(newObudowa)               : null,
+      ])
+
+      if (boardHw && diff > boardHw.stock_qty) {
+        setFormError(t('emulatory.stockErrorBoard', { max: boardHw.stock_qty }))
+        return
+      }
+      if (obHw && diff > obHw.stock_qty) {
+        setFormError(t('emulatory.stockErrorObudowa', { max: obHw.stock_qty }))
+        return
+      }
+
+      // Zapisz produkt
+      const { error } = editRow
+        ? await supabase.from('Products').update(payload).eq('id', editRow.id)
+        : await supabase.from('Products').insert(payload)
+      if (error) { setFormError(t('saveError')); return }
+
+      // Odejmij RÓŻNICĘ z komponentów
+      if (boardHw) {
+        await supabase.from('Hardware').update({ stock_qty: boardHw.stock_qty - diff }).eq('id', boardHw.id)
+      }
+      if (obHw) {
+        await supabase.from('Hardware').update({ stock_qty: obHw.stock_qty - diff }).eq('id', obHw.id)
+      }
+    } else {
+      // diff ≤ 0: sprzedaż / korekta w dół — tylko zapisz dane, nie ruszaj Hardware
+      const { error } = editRow
+        ? await supabase.from('Products').update(payload).eq('id', editRow.id)
+        : await supabase.from('Products').insert(payload)
+      if (error) { setFormError(t('saveError')); return }
+    }
+
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
-    void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse', editRow?.id ?? null, `Produkt: ${values.name}`, changes)
+    void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse', editRow?.id ?? null, `Emulator: ${values.name}`, changes)
     setModalOpen(false)
     fetchData()
   }
@@ -225,20 +286,43 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
               <input {...register('name')} style={inputStyle} placeholder="np. Mercedes MP3" />
             </FormField>
           </div>
-          <FormField label={t('emulatory.fieldPlytka')}>
-            <input {...register('plytka')} style={inputStyle} placeholder="np. Metalbox 1x chip" />
-          </FormField>
-          <FormField label={t('emulatory.fieldCategory')}>
-            <select {...register('category')} style={inputStyle}>
-              <option value="">{t('selectPlaceholder')}</option>
-              {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </FormField>
+
           <div className="col-span-2">
-            <FormField label={t('emulatory.fieldProgram')}>
-              <input {...register('program')} style={inputStyle} placeholder="np. For mercedes e5 v 2.4" />
+            <FormField label={t('emulatory.fieldPlytka')}>
+              <select
+                value={selectedHwBoard?.id ?? ''}
+                onChange={e => {
+                  const hw = programmedBoards.find(b => b.id === Number(e.target.value)) ?? null
+                  setSelectedHwBoard(hw)
+                  setValue('plytka', hw?.name ?? '')
+                  setValue('program', hw?.program ?? '')
+                }}
+                style={inputStyle}
+              >
+                <option value="">{t('selectPlaceholder')}</option>
+                {programmedBoards.map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}{b.program ? ` — ${b.program}` : ''} (stan: {b.stock_qty})
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            {/* hidden inputs keep form values in sync */}
+            <input type="hidden" {...register('plytka')} />
+            <input type="hidden" {...register('program')} />
+          </div>
+
+          <div className="col-span-2">
+            <FormField label={t('emulatory.fieldObudowa')}>
+              <select {...register('obudowa')} style={inputStyle}>
+                <option value="">{t('selectPlaceholder')}</option>
+                {obudowaOptions.map(o => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
             </FormField>
           </div>
+
           <FormField label={t('emulatory.fieldStock')}>
             <input {...register('stock_qty')} type="number" min="0" style={inputStyle} />
           </FormField>

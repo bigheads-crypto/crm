@@ -176,6 +176,7 @@ export interface Product {
   notes: string | null
   plytka: string | null
   program: string | null
+  obudowa: string | null
 }
 
 export type ProductInsert = Omit<Product, 'id' | 'created_at'>
@@ -217,6 +218,7 @@ export interface Hardware {
   name: string
   stock_qty: number
   notes: string | null
+  program: string | null
 }
 
 export type HardwareInsert = Omit<Hardware, 'id' | 'created_at'>
@@ -261,12 +263,23 @@ export interface Sale {
   shipping_details: string | null
   invoice_details: string | null
   deal_id: number | null
-  product_id: number | null
+  zestaw_id: number | null
   notes: string | null
 }
 
 export type SaleInsert = Omit<Sale, 'id' | 'created_at'>
 export type SaleUpdate = Partial<SaleInsert>
+
+// Pozycje zamówienia
+export interface SaleItem {
+  id: number
+  created_at: string
+  sale_id: number
+  zestaw_id: number | null
+  quantity: number
+  price: number | null
+}
+export type SaleItemInsert = Omit<SaleItem, 'id' | 'created_at'>
 
 // Domeny
 export interface Domain {

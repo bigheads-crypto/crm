@@ -57,10 +57,12 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
   useEffect(() => {
     async function loadOptions() {
       const supabase = createClient()
-      const { data: rows } = await supabase.from('Software').select('plytka').not('plytka', 'is', null)
-      setPlytkaOptions(
-        [...new Set((rows ?? []).map(r => r.plytka).filter(Boolean) as string[])].sort()
-      )
+      const { data: rows } = await supabase
+        .from('Hardware')
+        .select('name')
+        .eq('component_type', 'płytka surowa')
+        .order('name', { ascending: true })
+      setPlytkaOptions((rows ?? []).map(r => r.name).filter(Boolean) as string[])
     }
     loadOptions()
   }, [])
@@ -204,7 +206,10 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
             </select>
           </FormField>
           <FormField label={t('software.fieldPlytka')}>
-            <input {...register('plytka')} style={inputStyle} placeholder="np. Płytka 3x chip" />
+            <select {...register('plytka')} style={inputStyle}>
+              <option value="">{t('selectPlaceholder')}</option>
+              {plytkaOptions.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </FormField>
           <div className="col-span-2">
             <FormField label={`${t('software.fieldName')} *`} error={errors.name?.message}>

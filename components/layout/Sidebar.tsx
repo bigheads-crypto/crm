@@ -75,8 +75,8 @@ const NAV_ENTRIES: NavEntry[] = [
     labelKey: 'warehouse',
     icon: Package,
     items: [
-      { key: 'warehouseEmulatory', href: '/warehouse', tabKey: 'warehouse', icon: Cpu },
       { key: 'warehouseZestawy', href: '/warehouse/zestawy', tabKey: 'warehouse-zestawy', icon: Layers },
+      { key: 'warehouseEmulatory', href: '/warehouse', tabKey: 'warehouse', icon: Cpu },
       { key: 'warehouseWiazki', href: '/warehouse/wiazki', tabKey: 'warehouse-wiazki', icon: Cable },
       { key: 'warehouseHardware', href: '/warehouse/hardware', tabKey: 'warehouse-hardware', icon: CircuitBoard },
       { key: 'warehouseSoftware', href: '/warehouse/software', tabKey: 'warehouse-software', icon: FileCode },

@@ -216,6 +216,7 @@
   },
   "warehouse": {
     "required": "Required",
+    "cancel": "Cancel",
     "selectPlaceholder": "— select —",
     "saveError": "Save failed. Please try again.",
     "deleteError": "Delete failed. Please try again.",
@@ -230,16 +231,17 @@
       "colName": "Name",
       "colPlytka": "Board",
       "colProgram": "Firmware",
+      "colObudowa": "Enclosure",
       "colStock": "Stock",
-      "colCategory": "Type",
       "colNotes": "Notes",
       "fieldName": "Name",
-      "fieldPlytka": "Board",
-      "fieldCategory": "Category",
-      "fieldProgram": "Program (firmware version)",
+      "fieldPlytka": "Programmed board",
+      "fieldObudowa": "Enclosure",
       "fieldStock": "Stock quantity",
       "fieldPrice": "Default price (€)",
-      "fieldNotes": "Notes"
+      "fieldNotes": "Notes",
+      "stockErrorBoard": "Insufficient programmed board stock (available: {max} pcs.)",
+      "stockErrorObudowa": "Insufficient enclosure stock (available: {max} pcs.)"
     },
     "hardware": {
       "title": "Hardware",
@@ -256,7 +258,19 @@
       "fieldType": "Component type",
       "fieldName": "Name",
       "fieldStock": "Stock quantity",
-      "fieldNotes": "Notes"
+      "fieldNotes": "Notes",
+      "colProgram": "Program",
+      "programBtn": "Program boards",
+      "programModal": "Program boards",
+      "programFieldBoard": "Raw board",
+      "programFieldProgram": "Program to flash",
+      "programFieldQty": "Quantity to program",
+      "programSelectBoard": "Select board...",
+      "programSelectProgram": "Select program...",
+      "programNoBoardsAvailable": "No raw boards in stock",
+      "programNoProgramsAvailable": "No programs for this board",
+      "programErrorQty": "Quantity exceeds stock ({max} pcs.)",
+      "programErrorSave": "Error while saving"
     },
     "software": {
       "title": "Software",

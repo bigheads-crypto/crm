@@ -1,6 +1,6 @@
 # CRM 4DPF — referencja techniczna
 
-> Wersja systemu: v2.77 · Stack: Next.js 16 · Supabase · n8n · Hosting: TrueNAS Scale + Dockge
+> Wersja systemu: v2.82 · Stack: Next.js 16 · Supabase · n8n · Hosting: TrueNAS Scale + Dockge
 
 Ten plik jest referencją czytaną na żądanie. Reguły zachowania agenta są w `CLAUDE.md`; lista otwartych poprawek w `TODO.md`.
 
@@ -90,6 +90,7 @@ lib/
   permissions-config.ts             → TAB_DEFS, ALL_ROLES, PERM_TYPES, DEFAULT_VIEW_MAP
   permissions.ts                    → getAllowedTabs(role) — server function
   version.ts                        → APP_VERSION (bumpować przed commitem)
+  constants.ts                      → PAGE_SIZE=25, PAGE_SIZE_LARGE=50 (warehouse/activity-log)
 
 components/
   layout/
@@ -151,11 +152,43 @@ Nigdy nie używaj `user!.id` — `requireAuth` sam obsłuży brak sesji (redirec
 | `Wiazki` | `Wiazka` |
 | `Hardware` | `Hardware` |
 | `Software` | `Software` |
+| `Sales Items` | `SaleItem` (pozycje zamówień — wiele zestawów per zamówienie) |
 | `activity_logs` | `ActivityLog` (interfejs lokalny w `ActivityLogClient.tsx`) |
 | `profiles` | `Profile` (rozszerzenie Supabase Auth) |
 | `tab_permissions` | macierz uprawnień (rola × zakładka) |
 
-**Konwencje nazewnictwa:** większość tabel ma **spacje** i wielką literę — `Sales Deals`, `Support Case`, `Machine Issues`. Wyjątki: `domains`, `hostings` (lowercase), `OLX` (all-caps). Supabase jest case-sensitive.
+**Konwencje nazewnictwa:** większość tabel ma **spacje** i wielką literę — `Sales Deals`, `Support Case`, `Machine Issues`, `Sales Items`. Wyjątki: `domains`, `hostings` (lowercase), `OLX` (all-caps). Supabase jest case-sensitive.
+
+### Schematy kluczowych tabel Magazynu
+
+**`Hardware`** — płytki i obudowy:
+```
+id, created_at, component_type, name, stock_qty, notes, program
+```
+- `component_type`: `'płytka surowa' | 'płytka zaprogramowana' | 'obudowa' | 'rura'`
+- `program` (dodane v2.83): wypełniane tylko dla `płytka zaprogramowana` — nazwa wgranego firmware
+
+**`Products`** — emulatory gotowe:
+```
+id, created_at, name, category, stock_qty, price_default, notes, plytka, program, obudowa
+```
+- `category` zawsze `'emulator'` (hardkodowane przy zapisie)
+- `plytka` → nazwa płytki z Hardware, `program` → firmware, `obudowa` → nazwa obudowy z Hardware
+- `obudowa` (dodane v2.83): nazwa obudowy użytej do montażu
+
+**`Sales`** — zamówienia:
+```
+id, created_at, phone, client_name, company, ..., zestaw_id, ...
+```
+- `zestaw_id` (przemianowane z `product_id` v2.83): FK do `Zestawy.id`
+- Właściwe pozycje zamówienia → tabela `Sales Items`
+
+**`Sales Items`** — pozycje zamówień (dodane v2.83):
+```
+id, created_at, sale_id, zestaw_id, quantity, price
+```
+- `sale_id` FK → `Sales.id` (ON DELETE CASCADE)
+- Jedno zamówienie może mieć wiele pozycji z różnymi zestawami
 
 ### Punktacja / oceny
 
@@ -214,10 +247,20 @@ Używane przez wszystkie moduły dashboardu (15 stron). `admin/users` i `support
 ## 8. DataTable — komponent współdzielony
 
 - Props: `data`, `columns`, `totalCount`, `page`, `onPageChange`, `pageSize`.
+- **`extraActions?: React.ReactNode`** — opcjonalne elementy renderowane w toolbarze obok przycisku „Dodaj". Przydatne gdy moduł potrzebuje dodatkowego przycisku akcji (np. „Zaprogramuj" w Hardware). Oba elementy są zawinięte w `<div className="flex items-center gap-2">`. Użycie:
+  ```tsx
+  <DataTable
+    extraActions={<button onClick={openProgramModal}>Zaprogramuj</button>}
+    onAdd={canWrite ? openAdd : undefined}
+    ...
+  />
+  ```
 - Sortowanie: `sortKey`, `sortDir`, `onSortChange` — klik nagłówka przełącza asc/desc.
 - Filtry per-kolumna: `columnFilters: ColumnFilters`, `onColumnFiltersChange`.
 - Interfejs `Column<T>`: `key`, `header`, `render?`, `width?`, `sortable?`, `filterable?`, `filterOptions?`.
 - `searchValue` / `onSearchChange` — **legacy, nie renderowane**, zachowane dla kompatybilności.
+- **Resize kolumn**: linked — przeciąganie uchwytu przesuwa granicę między kolumnami (bieżąca rośnie, sąsiad z prawej maleje); ostatnia kolumna bez sąsiada zmienia tylko swoją szerokość. Min. 60px per kolumna.
+- **Ellipsis w komórkach**: `overflow`/`text-overflow` są na wrapper `<div>` wewnątrz `<td>` (nie na `<td>`) — tylko tak działa poprawnie. W `render` **nie dodawaj** własnych `maxWidth`, `overflow: hidden`, `whiteSpace: nowrap` — DataTable już to robi.
 
 Dropdown per kolumna (Google Sheets style) — ikona lejka w nagłówku otwiera popup z:
 
@@ -410,6 +453,7 @@ Statusy mają własne kolory niezależne od `--accent`:
 - Striping: parzyste `transparent`, nieparzyste `rgba(255,255,255,0.03)`.
 - Hover wiersza: `rgba(239,127,26,0.07)` — zarządzany przez `hoveredRow` state.
 - Kolory w dropdownie filtru/sortowania: `rgba(239,127,26,…)` — bez niebieskiego.
+- Uchwyt resize: zawsze widoczna linia `rgba(255,255,255,0.18)` → pomarańczowa na hover; strefa 8px.
 
 **Modal** (`components/shared/Modal.tsx`):
 
@@ -418,6 +462,7 @@ Statusy mają własne kolory niezależne od `--accent`:
 - Box-shadow: trójwarstwowy — pomarańczowa obwódka + głęboki cień + poświata.
 - Górna linia: gradient `var(--accent)` → `#fdb909` → transparent.
 - Przycisk zamknięcia: hover → pomarańczowy.
+- `maxHeight: calc(100dvh - 48px)` + `display: flex/column` — modal nigdy nie wychodzi poza ekran. Zawartość (`children`) scrolluje się pionowo; header (tytuł + X) pozostaje widoczny.
 
 **Animacje** (zdefiniowane w `app/globals.css`):
 
@@ -434,6 +479,78 @@ input:focus, select:focus, textarea:focus {
 ```
 
 Działa automatycznie na wszystkich polach — nie dodawaj `:focus` inline.
+
+---
+
+## 13b. Moduł Magazyn — specyfika
+
+### Typy komponentów Hardware (`component_type`)
+
+- `płytka surowa` — surowa płytka drukowana
+- `płytka zaprogramowana` — po operacji Zaprogramuj; ma wypełnione pole `program`
+- `obudowa` — plastikowa obudowa emulatora
+- `rura` — prosta rura (komponenty do innych zastosowań)
+
+### Operacja „Zaprogramuj" (HardwareClient)
+
+1. Użytkownik wybiera **płytkę surową** + **program** (z tabeli `Software` filtrowanej po nazwie płytki) + **ilość**.
+2. Kliknięcie „Zatwierdź":
+   - Wyszukuje rekord `Hardware` z `component_type='płytka zaprogramowana'` + `name` + `program` (`maybeSingle()`).
+   - Jeśli nie istnieje → `insert`; jeśli istnieje → `update` dodając ilość.
+   - Odejmuje ilość od `stock_qty` płytki surowej.
+3. Nowe rekordy „płytka zaprogramowana" trafiają na listę dostępną w formularzu Emulatory.
+
+### Zarządzanie stanem magazynowym — Emulatory
+
+Logika w `WarehouseClient.tsx` (`onSubmit`):
+
+```
+diff = editRow ? nowaIlość - staryStanEmulatora : nowaIlość
+
+if diff > 0:
+  walidacja: diff ≤ stock_qty płytki zaprogramowanej
+  walidacja: diff ≤ stock_qty obudowy
+  zapisz emulator (insert/update)
+  odejmij diff z płytki zaprogramowanej
+  odejmij diff z obudowy
+else (diff ≤ 0 — sprzedaż lub korekta w dół):
+  zapisz tylko dane emulatora, nie ruszaj Hardware
+```
+
+**Filozofia:** komponenty „schodzą" z magazynu tylko w momencie montażu (tworzenie lub zwiększenie ilości). Zmniejszenie stanu lub usunięcie emulatora NIE przywraca komponentów — zostały sprzedane/wydane.
+
+Supabase: filtrowanie `NULL` w kolumnie `program` → `.is('program', null)` (nie `.eq('program', null)` — to nie zadziała w PostgREST).
+
+### Formularz Emulatory
+
+- **płytka zaprogramowana**: dropdown z Hardware (component_type='płytka zaprogramowana'), shows `name — program (stan: X)`
+- **obudowa**: dropdown z Hardware (component_type='obudowa')
+- Po wyborze płytki → `setValue('plytka', hw.name)` + `setValue('program', hw.program)` + 2x `<input type="hidden">` do synchronizacji `useForm`
+- `category` zawsze `'emulator'` — hardkodowane w payloadzie, nie ma pola w formularzu
+
+### Formularz Zestawy
+
+- **emulator_program**: dropdown z `Products WHERE category='emulator'`, shows `name (plytka — program)`
+- **wiazka**: dropdown z `Wiazki`
+- Oba dropdowny zastąpiły wcześniej wolne pola tekstowe
+
+### Formularz Software
+
+- **plytka**: dropdown z `Hardware WHERE component_type='płytka surowa'` (wcześniej wolne pole tekstowe)
+
+### Zamówienia (Sales) — wiele pozycji
+
+- Kolumna `zestaw_id` w `Sales` (dawniej `product_id`) → FK do `Zestawy.id` (zachowana dla kompatybilności, może być pusta gdy wszystkie pozycje są w `Sales Items`)
+- Właściwe pozycje: tabela `Sales Items` (`sale_id`, `zestaw_id`, `quantity`, `price`)
+- `openEdit` jest `async`: ładuje istniejące pozycje z `Sales Items` przed otwarciem modala
+- `onSubmit`: save Sale → delete old items → insert new items
+- `itemsMap: Record<number, SaleItem[]>` — załadowany w `fetchData`, używany do renderowania listy zestawów per zamówienie
+
+### Sidebar — kolejność Magazyn
+
+```
+Zestawy → Emulatory → Wiązki → Hardware → Software
+```
 
 ---
 
@@ -459,5 +576,29 @@ Działa automatycznie na wszystkich polach — nie dodawaj `:focus` inline.
 **✅ v2.67 — uprawnienia CRUD** w logach (support-log, support-text-log, sales-text-log).
 **✅ v2.68 — role niestandardowe** dodawane przez UI panelu uprawnień.
 **✅ v2.77 — moduł Magazyn** (Emulatory / Zestawy / Wiązki / Hardware / Software) + sidebar z grupami.
+
+**✅ v2.78–v2.80 — ESLint clean, i18n Magazyn, TS fix**
+- v2.78: typ-check, 0 błędów tsc
+- v2.79: ESLint clean, rgba fix
+- v2.80: pełna i18n Magazynu (wszystkie stringi przez `useTranslations`)
+
+**✅ v2.81 — KPI miesięczny, OLX `created_at`, etykiety tygodni ISO-8601**
+
+**✅ v2.82 — `PAGE_SIZE` stałe, DataTable UX, Modal scroll**
+- `PAGE_SIZE` / `PAGE_SIZE_LARGE` wyciągnięte do `lib/constants.ts`
+- DataTable: fix UX filtrów, Modal: scroll wewnątrz `children`
+
+**✅ Sesja 2026-06-11 (następny commit) — rozbudowa Magazynu**
+- **Hardware.program** — nowa kolumna; `płytka zaprogramowana` ma wpisany firmware
+- **Operacja „Zaprogramuj"** w HardwareClient — modal, walidacja stanu, upsert `płytka zaprogramowana`
+- **`component_type = 'rura'`** — nowy typ komponentu Hardware
+- **Products.obudowa** — nowa kolumna FK-name do Hardware
+- **Emulatory — formularz przerobiony**: dropdowny zamiast free-text; zarządzanie stanem komponentów (diff-based deduction)
+- **Zestawy — formularz przerobiony**: dropdown emulatora + wiązki zamiast free-text
+- **Software — pole `plytka`**: dropdown z Hardware surowych zamiast free-text
+- **Sales — wiele pozycji**: nowa tabela `Sales Items`, formularz z dynamiczną listą pozycji
+- **Sales.product_id → zestaw_id**: zmiana nazwy kolumny, FK do Zestawy
+- **DataTable `extraActions` prop**: opcjonalne elementy toolbara obok „Dodaj"
+- **Sidebar**: Zestawy przed Emulatory w grupie Magazyn
 
 Otwarte poprawki: patrz `TODO.md`.

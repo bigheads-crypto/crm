@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Zestaw } from '@/lib/supabase/types'
+import type { Zestaw, Product, Wiazka } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
 type FormData = {
@@ -47,6 +47,19 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
   const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('nr')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [emulators, setEmulators] = useState<Product[]>([])
+  const [wiazki, setWiazki] = useState<Wiazka[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    Promise.all([
+      supabase.from('Products').select('*').eq('category', 'emulator').order('name'),
+      supabase.from('Wiazki').select('*').order('name'),
+    ]).then(([{ data: e }, { data: w }]) => {
+      setEmulators(e ?? [])
+      setWiazki(w ?? [])
+    })
+  }, [])
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
@@ -65,12 +78,16 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     },
     { key: 'name', header: t('zestawy.colName'), sortable: true, filterable: true },
     {
-      key: 'emulator_program', header: t('zestawy.colEmulatorProgram'), width: '240px', filterable: true,
+      key: 'emulator_program', header: t('zestawy.colEmulatorProgram'), width: '220px',
+      filterOptions: emulators.map(e => e.name),
       render: (v) => v ? (
         <span title={String(v)} style={{ fontSize: '12px' }}>{String(v)}</span>
       ) : '—',
     },
-    { key: 'wiazka', header: t('zestawy.colWiazka'), width: '160px', filterable: true },
+    {
+      key: 'wiazka', header: t('zestawy.colWiazka'), width: '160px',
+      filterOptions: wiazki.map(w => w.name),
+    },
     { key: 'notes', header: t('zestawy.colNotes'), filterable: false,
       render: (v) => v ? (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }} title={String(v)}>
@@ -81,7 +98,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     { key: 'instrukcja', header: t('zestawy.colInstrukcja'), width: '160px', filterable: false,
       render: (v) => v ? <span style={{ fontSize: '12px' }}>{String(v)}</span> : '—',
     },
-  ], [t])
+  ], [t, emulators, wiazki])
 
   const schema = z.object({
     nr: z.string().min(1, t('required')),
@@ -203,15 +220,23 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
           </FormField>
           <div className="col-span-2">
             <FormField label={t('zestawy.fieldEmulatorProgram')}>
-              <textarea
-                {...register('emulator_program')}
-                style={{ ...inputStyle, minHeight: '72px', resize: 'vertical' }}
-                placeholder="np. Płytka 3 chip can speed 500 / Kubota v 3800 dpf + adblue v 1.3"
-              />
+              <select {...register('emulator_program')} style={inputStyle}>
+                <option value="">{t('selectPlaceholder')}</option>
+                {emulators.map(e => (
+                  <option key={e.id} value={e.name}>
+                    {e.name}{e.plytka ? ` (${e.plytka}${e.program ? ` — ${e.program}` : ''})` : ''}
+                  </option>
+                ))}
+              </select>
             </FormField>
           </div>
           <FormField label={t('zestawy.fieldWiazka')}>
-            <input {...register('wiazka')} style={inputStyle} placeholder="np. Kubota dpf + scr" />
+            <select {...register('wiazka')} style={inputStyle}>
+              <option value="">{t('selectPlaceholder')}</option>
+              {wiazki.map(w => (
+                <option key={w.id} value={w.name}>{w.name}</option>
+              ))}
+            </select>
           </FormField>
           <FormField label={t('zestawy.fieldInstrukcja')}>
             <input {...register('instrukcja')} style={inputStyle} placeholder="np. Kubota dpf + scr v 1.6" />

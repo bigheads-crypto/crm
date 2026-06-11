@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslations } from 'next-intl'
+import { Cpu } from 'lucide-react'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -17,16 +18,18 @@ import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Hardware } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
-const COMPONENT_TYPE_OPTIONS = ['płytka surowa', 'płytka zaprogramowana', 'obudowa']
+const COMPONENT_TYPE_OPTIONS = ['płytka surowa', 'płytka zaprogramowana', 'obudowa', 'rura']
 const COMPONENT_TYPE_COLORS: Record<string, string> = {
   'płytka surowa': '#6b7280',
   'płytka zaprogramowana': '#e07818',
   'obudowa': '#3b82f6',
+  'rura': '#10a872',
 }
 
 type FormData = {
   component_type: string
   name: string
+  program?: string
   stock_qty?: string
   notes?: string
 }
@@ -67,6 +70,103 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   const [sortKey, setSortKey] = useState('component_type')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
+  // Program modal state
+  const [programModalOpen, setProgramModalOpen] = useState(false)
+  const [rawBoards, setRawBoards] = useState<Hardware[]>([])
+  const [selectedBoardId, setSelectedBoardId] = useState<number | ''>('')
+  const [programOptions, setProgramOptions] = useState<string[]>([])
+  const [selectedProgram, setSelectedProgram] = useState('')
+  const [programQty, setProgramQty] = useState(1)
+  const [programError, setProgramError] = useState<string | null>(null)
+  const [programLoading, setProgramLoading] = useState(false)
+
+  const selectedBoard = rawBoards.find(b => b.id === selectedBoardId) ?? null
+
+  async function openProgramModal() {
+    const supabase = createClient()
+    const { data: rows } = await supabase
+      .from('Hardware')
+      .select('*')
+      .eq('component_type', 'płytka surowa')
+      .gt('stock_qty', 0)
+      .order('name', { ascending: true })
+    setRawBoards(rows ?? [])
+    setSelectedBoardId('')
+    setProgramOptions([])
+    setSelectedProgram('')
+    setProgramQty(1)
+    setProgramError(null)
+    setProgramModalOpen(true)
+  }
+
+  async function handleBoardChange(boardId: number | '') {
+    setSelectedBoardId(boardId)
+    setSelectedProgram('')
+    setProgramOptions([])
+    if (!boardId) return
+    const board = rawBoards.find(b => b.id === boardId)
+    if (!board) return
+    const supabase = createClient()
+    const { data: rows } = await supabase
+      .from('Software')
+      .select('name')
+      .eq('plytka', board.name)
+      .order('name', { ascending: true })
+    setProgramOptions((rows ?? []).map(r => r.name))
+  }
+
+  async function submitProgram() {
+    if (!selectedBoard || !selectedProgram || programQty < 1) return
+    if (programQty > selectedBoard.stock_qty) {
+      setProgramError(t('hardware.programErrorQty', { max: selectedBoard.stock_qty }))
+      return
+    }
+    setProgramLoading(true)
+    setProgramError(null)
+    const supabase = createClient()
+
+    // Find existing programmed board entry
+    const { data: existing } = await supabase
+      .from('Hardware')
+      .select('*')
+      .eq('component_type', 'płytka zaprogramowana')
+      .eq('name', selectedBoard.name)
+      .eq('program', selectedProgram)
+      .maybeSingle()
+
+    let saveError: { message: string } | null = null
+
+    if (existing) {
+      const { error } = await supabase
+        .from('Hardware')
+        .update({ stock_qty: existing.stock_qty + programQty })
+        .eq('id', existing.id)
+      saveError = error
+    } else {
+      const { error } = await supabase
+        .from('Hardware')
+        .insert({ component_type: 'płytka zaprogramowana', name: selectedBoard.name, program: selectedProgram, stock_qty: programQty, notes: null })
+      saveError = error
+    }
+
+    if (saveError) { setProgramError(t('hardware.programErrorSave')); setProgramLoading(false); return }
+
+    // Decrease raw board stock
+    const { error: decreaseError } = await supabase
+      .from('Hardware')
+      .update({ stock_qty: selectedBoard.stock_qty - programQty })
+      .eq('id', selectedBoard.id)
+
+    if (decreaseError) { setProgramError(t('hardware.programErrorSave')); setProgramLoading(false); return }
+
+    void logActivity(supabase, 'create', 'warehouse-hardware', null,
+      `Zaprogramowano ${programQty}x ${selectedBoard.name} → ${selectedProgram}`)
+
+    setProgramLoading(false)
+    setProgramModalOpen(false)
+    fetchData()
+  }
+
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   const columns = useMemo<Column<Hardware>[]>(() => [
@@ -76,6 +176,12 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
       render: (v) => v ? <StatusBadge status={String(v)} colors={COMPONENT_TYPE_COLORS} /> : '—',
     },
     { key: 'name', header: t('hardware.colName'), sortable: true, filterable: true },
+    {
+      key: 'program', header: t('hardware.colProgram'), width: '220px', sortable: true, filterable: true,
+      render: (v) => v ? (
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{String(v)}</span>
+      ) : '—',
+    },
     {
       key: 'stock_qty', header: t('hardware.colStock'), width: '80px', sortable: true, filterable: false,
       render: (v) => <StockBadge qty={Number(v ?? 0)} />,
@@ -93,13 +199,16 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   const schema = z.object({
     component_type: z.string().min(1, t('required')),
     name: z.string().min(1, t('required')),
+    program: z.string().optional(),
     stock_qty: z.string().optional(),
     notes: z.string().optional(),
   })
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
+
+  const watchedType = watch('component_type')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -116,7 +225,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({ component_type: '', name: '', stock_qty: '0', notes: '' })
+    reset({ component_type: '', name: '', program: '', stock_qty: '0', notes: '' })
     setEditRow(null)
     setFormError(null)
     setModalOpen(true)
@@ -126,6 +235,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     reset({
       component_type: row.component_type,
       name: row.name,
+      program: row.program ?? '',
       stock_qty: String(row.stock_qty),
       notes: row.notes ?? '',
     })
@@ -139,6 +249,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     const payload = {
       component_type: values.component_type,
       name: values.name,
+      program: values.component_type === 'płytka zaprogramowana' ? (values.program || null) : null,
       stock_qty: values.stock_qty ? Number(values.stock_qty) : 0,
       notes: values.notes || null,
     }
@@ -164,6 +275,16 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     fetchData()
   }
 
+  const programBtn = canWrite ? (
+    <button
+      onClick={openProgramModal}
+      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium"
+      style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)' }}
+    >
+      <Cpu size={14} /> {t('hardware.programBtn')}
+    </button>
+  ) : undefined
+
   return (
     <>
       <PageHeader
@@ -178,6 +299,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
         onPageChange={setPage}
         pageSize={PAGE_SIZE}
         onAdd={canWrite ? openAdd : undefined}
+        extraActions={programBtn}
         onEdit={canEdit ? (row) => openEdit(row as unknown as Hardware) : undefined}
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Hardware) : undefined}
         loading={loading}
@@ -211,6 +333,13 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
               <input {...register('name')} style={inputStyle} placeholder="np. Płytka 3x chip" />
             </FormField>
           </div>
+          {watchedType === 'płytka zaprogramowana' && (
+            <div className="col-span-2">
+              <FormField label={t('hardware.colProgram')}>
+                <input {...register('program')} style={inputStyle} placeholder="np. Mercedes MP3 v2.1" />
+              </FormField>
+            </div>
+          )}
           <FormField label={t('hardware.fieldStock')}>
             <input {...register('stock_qty')} type="number" min="0" style={inputStyle} />
           </FormField>
@@ -237,6 +366,90 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
         title={t('hardware.deleteTitle')}
         description={t('hardware.deleteDesc', { name: deleteRow?.name ?? '' })}
       />
+
+      {/* Modal: Zaprogramuj */}
+      <Modal
+        open={programModalOpen}
+        onClose={() => setProgramModalOpen(false)}
+        title={t('hardware.programModal')}
+      >
+        <div className="flex flex-col gap-4">
+          {rawBoards.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{t('hardware.programNoBoardsAvailable')}</p>
+          ) : (
+            <>
+              <FormField label={t('hardware.programFieldBoard')}>
+                <select
+                  value={selectedBoardId}
+                  onChange={(e) => handleBoardChange(e.target.value ? Number(e.target.value) : '')}
+                  style={inputStyle}
+                >
+                  <option value="">{t('hardware.programSelectBoard')}</option>
+                  {rawBoards.map(b => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.stock_qty} szt.)</option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField label={t('hardware.programFieldProgram')}>
+                {selectedBoardId && programOptions.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '6px 0' }}>
+                    {t('hardware.programNoProgramsAvailable')}
+                  </p>
+                ) : (
+                  <select
+                    value={selectedProgram}
+                    onChange={(e) => setSelectedProgram(e.target.value)}
+                    style={inputStyle}
+                    disabled={!selectedBoardId}
+                  >
+                    <option value="">{t('hardware.programSelectProgram')}</option>
+                    {programOptions.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                )}
+              </FormField>
+
+              <FormField label={t('hardware.programFieldQty')}>
+                <input
+                  type="number"
+                  min={1}
+                  max={selectedBoard?.stock_qty ?? 999}
+                  value={programQty}
+                  onChange={(e) => setProgramQty(Math.max(1, Number(e.target.value)))}
+                  style={inputStyle}
+                  disabled={!selectedProgram}
+                />
+              </FormField>
+
+              {programError && (
+                <p style={{ color: 'var(--danger)', fontSize: '13px' }}>{programError}</p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setProgramModalOpen(false)}
+                  className="rounded-lg px-4 py-2 text-sm"
+                  style={{ backgroundColor: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={submitProgram}
+                  disabled={!selectedBoard || !selectedProgram || programQty < 1 || programLoading}
+                  className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium"
+                  style={{ backgroundColor: 'var(--accent)', color: '#ffffff', opacity: (!selectedBoard || !selectedProgram || programLoading) ? 0.5 : 1 }}
+                >
+                  {programLoading ? '...' : t('hardware.programBtn')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </>
   )
 }
