@@ -192,6 +192,8 @@ export interface Zestaw {
   wiazka: string | null
   notes: string | null
   instrukcja: string | null
+  price: number | null
+  price_currency: string | null
 }
 
 export type ZestawInsert = Omit<Zestaw, 'id' | 'created_at'>

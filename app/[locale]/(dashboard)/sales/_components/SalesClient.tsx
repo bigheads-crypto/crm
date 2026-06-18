@@ -192,7 +192,27 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
 
   const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
   const phoneWatch = useWatch({ control, name: 'phone' })
+  const shippingWatch = useWatch({ control, name: 'shipping_cost' })
   const [autofilled, setAutofilled] = useState(false)
+
+  const itemsTotal = useMemo(() =>
+    formItems.reduce((sum, item) => {
+      const p = parseFloat(item.price) || 0
+      const q = parseInt(item.quantity) || 1
+      return sum + p * q
+    }, 0),
+    [formItems]
+  )
+
+  useEffect(() => {
+    setValue('price', itemsTotal > 0 ? String(itemsTotal) : '')
+  }, [itemsTotal, setValue])
+
+  useEffect(() => {
+    const shipping = parseFloat(shippingWatch ?? '') || 0
+    const total = itemsTotal + shipping
+    setValue('total', total > 0 ? String(total) : '')
+  }, [itemsTotal, shippingWatch, setValue])
 
   useEffect(() => {
     if (editRow || !phoneWatch || phoneWatch.length < 6) { setAutofilled(false); return }
@@ -252,7 +272,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({})
+    reset({ sale_status: 'new' })
     setEditRow(null)
     setFormError(null)
     setAutofilled(false)
@@ -436,7 +456,15 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
                     {i === 0 && <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Zestaw</label>}
                     <select
                       value={item.zestaw_id}
-                      onChange={e => updateItem(i, 'zestaw_id', e.target.value)}
+                      onChange={e => {
+                        const id = e.target.value
+                        const z = zestawy.find(z => String(z.id) === id)
+                        setFormItems(prev => prev.map((it, idx) => idx !== i ? it : {
+                          ...it,
+                          zestaw_id: id,
+                          price: z?.price != null ? String(z.price) : it.price,
+                        }))
+                      }}
                       style={inputStyle}
                     >
                       <option value="">— wybierz zestaw —</option>
@@ -453,14 +481,22 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ width: '90px' }}>
-                    {i === 0 && <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cena (€)</label>}
-                    <input
-                      type="number" step="0.01" value={item.price}
-                      onChange={e => updateItem(i, 'price', e.target.value)}
-                      style={inputStyle}
-                      placeholder="0.00"
-                    />
+                  <div style={{ width: '100px' }}>
+                    {i === 0 && <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Cena</label>}
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number" step="0.01" value={item.price}
+                        onChange={e => updateItem(i, 'price', e.target.value)}
+                        style={{ ...inputStyle, paddingRight: '42px' }}
+                        placeholder="0.00"
+                      />
+                      <span style={{
+                        position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                        fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', pointerEvents: 'none',
+                      }}>
+                        {zestawMap[Number(item.zestaw_id)]?.price_currency ?? 'USD'}
+                      </span>
+                    </div>
                   </div>
                   {formItems.length > 1 && (
                     <button
@@ -484,9 +520,23 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
           </div>
 
           <FormSection title="Płatność" />
-          <FormField label="Cena (€)"><input {...register('price')} type="number" step="0.01" style={inputStyle} /></FormField>
-          <FormField label="Shipping (€)"><input {...register('shipping_cost')} type="number" step="0.01" style={inputStyle} /></FormField>
-          <FormField label="Total (€)"><input {...register('total')} type="number" step="0.01" style={inputStyle} /></FormField>
+          <FormField label="Cena — suma pozycji">
+            <input
+              {...register('price')}
+              type="number" step="0.01" readOnly
+              style={{ ...inputStyle, backgroundColor: 'rgba(224,120,24,0.07)', color: 'var(--text)', cursor: 'default' }}
+            />
+          </FormField>
+          <FormField label="Shipping">
+            <input {...register('shipping_cost')} type="number" step="0.01" style={inputStyle} placeholder="0.00" />
+          </FormField>
+          <FormField label="Total — cena + shipping">
+            <input
+              {...register('total')}
+              type="number" step="0.01" readOnly
+              style={{ ...inputStyle, backgroundColor: 'rgba(224,120,24,0.07)', color: 'var(--text)', cursor: 'default' }}
+            />
+          </FormField>
           <FormField label="Sposób płatności">
             <select {...register('payment_method')} style={inputStyle}>
               <option value="">— wybierz —</option>

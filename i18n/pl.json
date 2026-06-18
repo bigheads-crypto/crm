@@ -327,7 +327,10 @@
       "fieldEmulatorProgram": "Emulator / Program",
       "fieldWiazka": "Wiązka",
       "fieldInstrukcja": "Instrukcja",
-      "fieldNotes": "Uwagi / Dodatki"
+      "fieldNotes": "Uwagi / Dodatki",
+      "colPrice": "Cena",
+      "fieldPrice": "Cena (PLN)",
+      "fieldPriceCurrency": "Waluta"
     }
   },
   "status": {

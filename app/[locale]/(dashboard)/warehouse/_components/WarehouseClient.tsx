@@ -323,12 +323,11 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
             </FormField>
           </div>
 
-          <FormField label={t('emulatory.fieldStock')}>
-            <input {...register('stock_qty')} type="number" min="0" style={inputStyle} />
-          </FormField>
-          <FormField label={t('emulatory.fieldPrice')}>
-            <input {...register('price_default')} type="number" step="0.01" style={inputStyle} />
-          </FormField>
+          <div className="col-span-2">
+            <FormField label={t('emulatory.fieldStock')}>
+              <input {...register('stock_qty')} type="number" min="0" style={inputStyle} />
+            </FormField>
+          </div>
           <div className="col-span-2">
             <FormField label={t('emulatory.fieldNotes')}>
               <textarea {...register('notes')} style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} />

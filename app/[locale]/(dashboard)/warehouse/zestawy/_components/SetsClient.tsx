@@ -16,6 +16,8 @@ import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Zestaw, Product, Wiazka } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
 
+const CURRENCY_OPTIONS = ['USD', 'EUR', 'GBP', 'PLN']
+
 type FormData = {
   nr: string
   name: string
@@ -23,6 +25,8 @@ type FormData = {
   wiazka?: string
   notes?: string
   instrukcja?: string
+  price?: string
+  price_currency?: string
 }
 
 interface Props {
@@ -98,6 +102,18 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     { key: 'instrukcja', header: t('zestawy.colInstrukcja'), width: '160px', filterable: false,
       render: (v) => v ? <span style={{ fontSize: '12px' }}>{String(v)}</span> : '—',
     },
+    {
+      key: 'price', header: t('zestawy.colPrice'), width: '110px', sortable: true, filterable: false,
+      render: (v, row) => {
+        if (v == null) return '—'
+        const currency = (row as unknown as Zestaw).price_currency ?? 'USD'
+        return (
+          <span style={{ fontSize: '13px', fontWeight: 600 }}>
+            {Number(v).toLocaleString('pl-PL', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        )
+      },
+    },
   ], [t, emulators, wiazki])
 
   const schema = z.object({
@@ -107,6 +123,8 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     wiazka: z.string().optional(),
     notes: z.string().optional(),
     instrukcja: z.string().optional(),
+    price: z.string().optional(),
+    price_currency: z.string().optional(),
   })
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -128,7 +146,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({ nr: '', name: '', emulator_program: '', wiazka: '', notes: '', instrukcja: '' })
+    reset({ nr: '', name: '', emulator_program: '', wiazka: '', notes: '', instrukcja: '', price: '', price_currency: 'USD' })
     setEditRow(null)
     setFormError(null)
     setModalOpen(true)
@@ -142,6 +160,8 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
       wiazka: row.wiazka ?? '',
       notes: row.notes ?? '',
       instrukcja: row.instrukcja ?? '',
+      price: row.price != null ? String(row.price) : '',
+      price_currency: row.price_currency ?? 'USD',
     })
     setEditRow(row)
     setFormError(null)
@@ -157,6 +177,8 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
       wiazka: values.wiazka || null,
       notes: values.notes || null,
       instrukcja: values.instrukcja || null,
+      price: values.price ? Number(values.price) : null,
+      price_currency: values.price_currency || 'USD',
     }
     const { error } = editRow
       ? await supabase.from('Zestawy').update(payload).eq('id', editRow.id)
@@ -240,6 +262,16 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
           </FormField>
           <FormField label={t('zestawy.fieldInstrukcja')}>
             <input {...register('instrukcja')} style={inputStyle} placeholder="np. Kubota dpf + scr v 1.6" />
+          </FormField>
+          <FormField label={t('zestawy.fieldPrice')}>
+            <input {...register('price')} type="number" step="0.01" min="0" style={inputStyle} placeholder="np. 1200.00" />
+          </FormField>
+          <FormField label={t('zestawy.fieldPriceCurrency')}>
+            <select {...register('price_currency')} style={inputStyle}>
+              {CURRENCY_OPTIONS.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </FormField>
           <div className="col-span-2">
             <FormField label={t('zestawy.fieldNotes')}>
