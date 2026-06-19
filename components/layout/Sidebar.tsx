@@ -147,6 +147,7 @@ function SortableNavItem({ entry, locale, collapsed, isActive, t }: SortableItem
       </Link>
       {!collapsed && (
         <span
+          suppressHydrationWarning
           {...attributes}
           {...listeners}
           className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
@@ -216,6 +217,7 @@ function SortableNavGroup({
           <ChevronDown size={14} style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms', flexShrink: 0 }} />
         </button>
         <span
+          suppressHydrationWarning
           {...attributes}
           {...listeners}
           className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
