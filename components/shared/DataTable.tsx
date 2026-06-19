@@ -40,6 +40,8 @@ export interface DataTableProps<T> {
   onSortChange?: (key: string, dir: 'asc' | 'desc') => void
   columnFilters?: ColumnFilters
   onColumnFiltersChange?: (filters: ColumnFilters) => void
+  rowActions?: (row: T) => React.ReactNode
+  onRowDoubleClick?: (row: T) => void
   // legacy — kept for backward compat
   searchValue?: string
   onSearchChange?: (val: string) => void
@@ -80,9 +82,11 @@ export function DataTable<T extends Record<string, unknown>>({
   onSortChange,
   columnFilters: externalFilters,
   onColumnFiltersChange,
+  rowActions,
+  onRowDoubleClick,
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(totalCount / pageSize)
-  const showActions = (canEdit && onEdit) || (canDelete && onDelete)
+  const showActions = (canEdit && onEdit) || (canDelete && onDelete) || !!rowActions
   const activeFilterCount = Object.keys(externalFilters ?? {}).length
 
   // Column resize
@@ -414,6 +418,10 @@ export function DataTable<T extends Record<string, unknown>>({
                     key={key}
                     onMouseEnter={() => setHoveredRow(key)}
                     onMouseLeave={() => setHoveredRow(null)}
+                    onDoubleClick={() => {
+                      const handler = onRowDoubleClick ?? (canEdit ? onEdit : undefined)
+                      handler?.(row)
+                    }}
                     style={{
                       borderBottom: '1px solid var(--border)',
                       backgroundColor: isHovered
@@ -422,6 +430,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         ? 'transparent'
                         : 'rgba(255,255,255,0.03)',
                       transition: 'background-color 0.1s',
+                      cursor: (onRowDoubleClick ?? (canEdit ? onEdit : undefined)) ? 'pointer' : undefined,
                     }}
                   >
                     {columns.map((col) => {
@@ -441,6 +450,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     {showActions && (
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {rowActions?.(row)}
                           {canEdit && onEdit && (
                             <button
                               onClick={() => onEdit(row)}

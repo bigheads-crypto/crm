@@ -267,6 +267,7 @@ export interface Sale {
   deal_id: number | null
   zestaw_id: number | null
   notes: string | null
+  client_id: number | null
 }
 
 export type SaleInsert = Omit<Sale, 'id' | 'created_at'>
@@ -349,6 +350,25 @@ export interface SupportBacklog {
 
 export type SupportBacklogInsert = Omit<SupportBacklog, 'id' | 'created_at' | 'updated_at'>
 export type SupportBacklogUpdate = Partial<SupportBacklogInsert>
+
+// Klienci
+export interface Client {
+  id: number
+  created_at: string
+  phone: string | null
+  phone_alt: string | null
+  client_name: string | null
+  company: string | null
+  email: string | null
+  location: string | null
+  vat_no: string | null
+  assigned_salesman: string | null
+  source: string | null
+  notes: string | null
+}
+
+export type ClientInsert = Omit<Client, 'id' | 'created_at'>
+export type ClientUpdate = Partial<ClientInsert>
 
 // Support Backlog Log — pojedyncza interakcja w ramach sprawy
 export interface SupportBacklogLog {

@@ -13,8 +13,9 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
-import type { Sale, SaleItem, Zestaw, Role } from '@/lib/supabase/types'
+import type { Sale, SaleItem, Zestaw, Client, Role } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
+import { normalizePhone } from '@/lib/phone'
 
 const PAYMENT_OPTIONS = ['PayPal', 'przelew']
 const STATUS_OPTIONS = ['new', 'processing', 'shipped', 'delivered', 'cancelled']
@@ -107,9 +108,9 @@ function FormSection({ title }: { title: string }) {
   )
 }
 
-interface Props { initialData: Sale[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean }
+interface Props { initialData: Sale[]; initialCount: number; role: Role; canWrite: boolean; canEdit: boolean; handlowcy: string[]; currentSalesman: string }
 
-export function SalesClient({ initialData, initialCount, role, canWrite, canEdit }: Props) {
+export function SalesClient({ initialData, initialCount, role, canWrite, canEdit, handlowcy, currentSalesman }: Props) {
   const [data, setData] = useState(initialData)
   const [count, setCount] = useState(initialCount)
   const [page, setPage] = useState(1)
@@ -192,8 +193,13 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
 
   const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
   const phoneWatch = useWatch({ control, name: 'phone' })
+  const emailWatch = useWatch({ control, name: 'email_address' })
+  const companyWatch = useWatch({ control, name: 'company' })
   const shippingWatch = useWatch({ control, name: 'shipping_cost' })
   const [autofilled, setAutofilled] = useState(false)
+  const [foundClient, setFoundClient] = useState<Client | null>(null)
+  const [suggestedClient, setSuggestedClient] = useState<Client | null>(null)
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false)
 
   const itemsTotal = useMemo(() =>
     formItems.reduce((sum, item) => {
@@ -215,15 +221,56 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   }, [itemsTotal, shippingWatch, setValue])
 
   useEffect(() => {
-    if (editRow || !phoneWatch || phoneWatch.length < 6) { setAutofilled(false); return }
+    if (editRow || !phoneWatch || phoneWatch.length < 6) {
+      setAutofilled(false)
+      setFoundClient(null)
+      setSuggestedClient(null)
+      return
+    }
     const timer = setTimeout(async () => {
-      const { data: match } = await createClient()
+      const supabase = createClient()
+      const normalized = normalizePhone(phoneWatch)
+
+      // 1. Sprawdź Clients (główny + alternatywny numer) — po znormalizowanym numerze
+      const { data: client } = await supabase
+        .from('Clients')
+        .select('*')
+        .or(`phone.eq.${normalized},phone_alt.eq.${normalized}`)
+        .maybeSingle()
+
+      if (client) {
+        setFoundClient(client as Client)
+        if (client.client_name) setValue('client_name', client.client_name)
+        if (client.company) setValue('company', client.company)
+        if (client.email) setValue('email_address', client.email)
+        if (client.location) setValue('location', client.location)
+        if (client.vat_no) setValue('vat_no', client.vat_no)
+        if (client.assigned_salesman) setValue('salesman', client.assigned_salesman)
+
+        // Pobierz adres wysyłki i faktury z ostatniego zamówienia
+        const { data: lastSale } = await supabase
+          .from('Sales')
+          .select('shipping_details, invoice_details, first_contact')
+          .eq('client_id', client.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (lastSale?.shipping_details) setValue('shipping_details', lastSale.shipping_details)
+        if (lastSale?.invoice_details) setValue('invoice_details', lastSale.invoice_details)
+        if (lastSale?.first_contact) setValue('first_contact', lastSale.first_contact)
+        setAutofilled(true)
+        return
+      }
+
+      // 2. Fallback — stary lookup po Sales (dla klientów sprzed Clients)
+      const { data: match } = await supabase
         .from('Sales')
         .select('salesman, email_address, shipping_details, invoice_details, company, client_name, location, vat_no, first_contact')
-        .eq('phone', phoneWatch)
+        .eq('phone', normalized)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
+
       if (match) {
         if (match.salesman) setValue('salesman', match.salesman)
         if (match.email_address) setValue('email_address', match.email_address)
@@ -235,12 +282,56 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         if (match.vat_no) setValue('vat_no', match.vat_no)
         if (match.first_contact) setValue('first_contact', match.first_contact)
         setAutofilled(true)
+        setFoundClient(null)
       } else {
         setAutofilled(false)
+        setFoundClient(null)
       }
     }, 400)
     return () => clearTimeout(timer)
   }, [phoneWatch, editRow, setValue])
+
+  // Lookup po emailu — tylko gdy telefon nic nie znalazł
+  useEffect(() => {
+    if (editRow || foundClient || autofilled || suggestionDismissed) return
+    if (!emailWatch || emailWatch.length < 4) { setSuggestedClient(null); return }
+    const timer = setTimeout(async () => {
+      const { data } = await createClient()
+        .from('Clients')
+        .select('*')
+        .eq('email', emailWatch)
+        .maybeSingle()
+      setSuggestedClient(data ? (data as Client) : null)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [emailWatch, editRow, foundClient, autofilled, suggestionDismissed])
+
+  // Lookup po nazwie firmy — tylko gdy email nic nie znalazł
+  useEffect(() => {
+    if (editRow || foundClient || autofilled || suggestionDismissed || suggestedClient) return
+    if (!companyWatch || companyWatch.length < 3) return
+    const timer = setTimeout(async () => {
+      const { data } = await createClient()
+        .from('Clients')
+        .select('*')
+        .ilike('company', `%${companyWatch}%`)
+        .limit(1)
+        .maybeSingle()
+      if (data) setSuggestedClient(data as Client)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [companyWatch, editRow, foundClient, autofilled, suggestionDismissed, suggestedClient])
+
+  function linkToSuggestedClient(client: Client) {
+    setFoundClient(client)
+    setSuggestedClient(null)
+    if (client.client_name) setValue('client_name', client.client_name)
+    if (client.company) setValue('company', client.company)
+    if (client.email) setValue('email_address', client.email)
+    if (client.location) setValue('location', client.location)
+    if (client.vat_no) setValue('vat_no', client.vat_no)
+    setAutofilled(true)
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -272,10 +363,13 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   useEffect(() => { fetchData() }, [fetchData])
 
   const openAdd = () => {
-    reset({ sale_status: 'new' })
+    reset({ sale_status: 'new', salesman: currentSalesman })
     setEditRow(null)
     setFormError(null)
     setAutofilled(false)
+    setFoundClient(null)
+    setSuggestedClient(null)
+    setSuggestionDismissed(false)
     setFormItems([{ zestaw_id: '', quantity: '1', price: '' }])
     setModalOpen(true)
   }
@@ -324,7 +418,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const onSubmit = async (values: FormData) => {
     const supabase = createClient()
     const payload = {
-      phone: values.phone,
+      phone: values.phone ? normalizePhone(values.phone) : null,
       client_name: values.client_name || null,
       company: values.company || null,
       email_address: values.email_address || null,
@@ -345,13 +439,38 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       notes: values.notes || null,
     }
 
+    // Ustal client_id — tylko przy nowym zamówieniu
+    let clientId: number | null = editRow?.client_id ?? null
+    if (!editRow) {
+      if (foundClient) {
+        clientId = foundClient.id
+      } else if (values.phone) {
+        // Nowy klient — auto-INSERT do Clients
+        const { data: newClient } = await supabase
+          .from('Clients')
+          .insert({
+            phone: values.phone ? normalizePhone(values.phone) : null,
+            client_name: values.client_name || null,
+            company: values.company || null,
+            email: values.email_address || null,
+            location: values.location || null,
+            vat_no: values.vat_no || null,
+            assigned_salesman: values.salesman || null,
+            source: 'order',
+          })
+          .select('id')
+          .single()
+        if (newClient) clientId = newClient.id
+      }
+    }
+
     let saleId: number
     if (editRow) {
-      const { error } = await supabase.from('Sales').update(payload).eq('id', editRow.id)
+      const { error } = await supabase.from('Sales').update({ ...payload, client_id: clientId }).eq('id', editRow.id)
       if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
       saleId = editRow.id
     } else {
-      const { data: saved, error } = await supabase.from('Sales').insert(payload).select('id').single()
+      const { data: saved, error } = await supabase.from('Sales').insert({ ...payload, client_id: clientId }).select('id').single()
       if (error || !saved) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
       saleId = saved.id
     }
@@ -411,7 +530,36 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-3">
           {autofilled && !editRow && (
             <div className="col-span-2 text-xs px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(16,168,114,0.1)', color: '#10a872', border: '1px solid rgba(16,168,114,0.25)' }}>
-              Uzupełniono dane z poprzedniego zamówienia tego klienta
+              {foundClient
+                ? `Znany klient: ${foundClient.client_name ?? foundClient.company ?? foundClient.phone} — dane uzupełnione z bazy klientów`
+                : 'Uzupełniono dane z poprzedniego zamówienia tego klienta'}
+            </div>
+          )}
+          {suggestedClient && !editRow && (
+            <div className="col-span-2 flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: 'rgba(224,120,24,0.1)', color: 'var(--accent)', border: '1px solid rgba(224,120,24,0.3)' }}>
+              <span>
+                Znamy tę firmę: <strong>{suggestedClient.client_name ?? suggestedClient.company}</strong>
+                {suggestedClient.assigned_salesman ? ` — przypisana do: ${suggestedClient.assigned_salesman}` : ''}
+                {' '}— czy to ten sam klient?
+              </span>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => linkToSuggestedClient(suggestedClient)}
+                  className="px-3 py-1 rounded font-medium"
+                  style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                >
+                  Połącz
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSuggestedClient(null); setSuggestionDismissed(true) }}
+                  className="px-3 py-1 rounded font-medium"
+                  style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}
+                >
+                  Nowy klient
+                </button>
+              </div>
             </div>
           )}
 
@@ -425,10 +573,10 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
 
           <FormSection title="Zamówienie" />
           <FormField label="Handlowiec">
-            <Controller name="salesman" control={control}
-              render={({ field }) => (
-                <SalesmanAutocomplete salesmen={salesmen} value={field.value ?? ''} onChange={field.onChange} inputStyle={inputStyle} />
-              )}
+            <input
+              {...register('salesman')}
+              readOnly
+              style={{ ...inputStyle, backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)', cursor: 'default' }}
             />
           </FormField>
           <FormField label="Pierwszy kontakt">
@@ -438,13 +586,14 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
               )}
             />
           </FormField>
-          <FormField label="Status">
-            <select {...register('sale_status')} style={inputStyle}>
-              <option value="">— wybierz —</option>
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </FormField>
-          <FormField label="Ilość"><input {...register('quantity')} type="number" min="1" style={inputStyle} /></FormField>
+          <div className="col-span-2">
+            <FormField label="Status">
+              <select {...register('sale_status')} style={inputStyle}>
+                <option value="">— wybierz —</option>
+                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </FormField>
+          </div>
           <div className="col-span-2">
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px', marginBottom: '8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
               Pozycje zamówienia

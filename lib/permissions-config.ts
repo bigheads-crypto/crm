@@ -42,6 +42,7 @@ export const TAB_DEFS: TabDef[] = [
   { key: 'warehouse-hardware', label: 'Hardware (magazyn)' },
   { key: 'warehouse-software', label: 'Software (magazyn)' },
   { key: 'admin/activity-log', label: 'Logi aktywności' },
+  { key: 'clients', label: 'Klienci' },
 ]
 
 // Które role mogą widzieć daną zakładkę (domyślne)
@@ -69,6 +70,7 @@ const DEFAULT_VIEW: Record<string, Role[]> = {
   'admin/users': ['admin'],
   'admin/permissions': ['admin'],
   'admin/activity-log': ['admin', 'manager'],
+  'clients': ['admin', 'manager', 'handlowiec'],
 }
 
 export function getDefaultPerms(tabKey: string, role: Role): TabPerms {
