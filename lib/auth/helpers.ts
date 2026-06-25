@@ -24,15 +24,22 @@ export async function getUserProfile(userId: string): Promise<Profile | null> {
 
 // Pobiera zalogowanego użytkownika i profil — redirect do login jeśli brak sesji
 export async function requireAuth(locale: string = 'pl') {
-  const user = await getCurrentUser()
-  if (!user) {
-    redirect(`/${locale}/login`)
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      redirect(`/${locale}/login`)
+    }
+    const profile = await getUserProfile(user.id)
+    if (!profile) {
+      redirect(`/${locale}/login`)
+    }
+    return { user, profile }
+  } catch (err: unknown) {
+    // Next.js redirect() rzuca wewnętrznie — przepuszczamy dalej
+    if (err && typeof err === 'object' && 'digest' in err) throw err
+    // Supabase niedostępny — przekieruj z informacją
+    redirect(`/${locale}/login?db=offline`)
   }
-  const profile = await getUserProfile(user.id)
-  if (!profile) {
-    redirect(`/${locale}/login`)
-  }
-  return { user, profile }
 }
 
 // Ścieżka przekierowania po zalogowaniu zależna od roli

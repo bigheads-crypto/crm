@@ -42,11 +42,14 @@ function getRedirectPath(role: Role, locale: string): string {
 
 export default function LoginPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>
+  searchParams: Promise<{ db?: string }>
 }) {
   // Odczyt locale przez use() w Client Component (React 19)
   const { locale } = use(params)
+  const { db } = use(searchParams)
 
   const router = useRouter()
   const t = useTranslations('auth')
@@ -70,7 +73,11 @@ export default function LoginPage({
     })
 
     if (authError) {
-      setError(t('error'))
+      const isConnectionError =
+        !authError.status ||
+        authError.message?.toLowerCase().includes('fetch') ||
+        authError.message?.toLowerCase().includes('network')
+      setError(isConnectionError ? t('errorConnection') : t('error'))
       return
     }
 
@@ -122,6 +129,20 @@ export default function LoginPage({
             {t('subtitle')}
           </p>
         </div>
+
+        {/* Banner — baza danych niedostępna */}
+        {db === 'offline' && (
+          <div
+            className="rounded-lg px-3 py-2.5 text-sm mb-4"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: 'var(--danger)',
+            }}
+          >
+            {t('errorDbOffline')}
+          </div>
+        )}
 
         {/* Formularz */}
         <form onSubmit={handleSubmit(onSubmit)} method="post" className="flex flex-col gap-4">

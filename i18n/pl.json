@@ -34,6 +34,8 @@
     "signIn": "Zaloguj się",
     "signingIn": "Logowanie...",
     "error": "Nieprawidłowy email lub hasło",
+    "errorConnection": "Nie można połączyć się z bazą danych. Sprawdź czy serwer jest uruchomiony.",
+    "errorDbOffline": "Baza danych jest niedostępna. Skontaktuj się z administratorem.",
     "emailPlaceholder": "twoj@email.com",
     "passwordPlaceholder": "••••••••"
   },

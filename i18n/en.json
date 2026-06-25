@@ -34,6 +34,8 @@
     "signIn": "Sign in",
     "signingIn": "Signing in...",
     "error": "Invalid email or password",
+    "errorConnection": "Cannot connect to the database. Check if the server is running.",
+    "errorDbOffline": "Database is unavailable. Please contact the administrator.",
     "emailPlaceholder": "your@email.com",
     "passwordPlaceholder": "••••••••"
   },
