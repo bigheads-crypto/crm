@@ -4,8 +4,10 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { LogOut, ChevronDown, UserCircle } from 'lucide-react'
+import { LogOut, ChevronDown, UserCircle, Bell, BellOff } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
+import { useCallNotificationsEnabled } from '@/hooks/useCallNotificationsEnabled'
 
 // Mapowanie fragmentu URL na klucz tłumaczenia tytułu
 const PATH_TO_TITLE: Record<string, string> = {
@@ -14,6 +16,7 @@ const PATH_TO_TITLE: Record<string, string> = {
   'sales-quality': 'Jakość sprzedaży',
   sales: 'Zamówienia',
   'sales-text-log': 'SMS Sprzedaż',
+  calls: 'Rozmowy',
   'support-cases': 'Sprawy supportu',
   'support-backlog': 'Support Backlog',
   'support-log': 'Log supportu',
@@ -32,11 +35,14 @@ const PATH_TO_TITLE: Record<string, string> = {
 interface NavbarProps {
   userEmail: string
   locale: string
+  showCallToggle?: boolean
 }
 
-export function Navbar({ userEmail, locale }: NavbarProps) {
+export function Navbar({ userEmail, locale, showCallToggle }: NavbarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const tCalls = useTranslations('calls')
+  const { enabled: notificationsEnabled, toggle: toggleNotifications } = useCallNotificationsEnabled()
 
   // Pobierz tytuł strony z pathname
   const segments = pathname.split('/').filter(Boolean)
@@ -76,6 +82,22 @@ export function Navbar({ userEmail, locale }: NavbarProps) {
       </h1>
 
       <div className="flex items-center gap-3">
+        {/* Przełącznik powiadomień o rozmowach (dyżur) — tylko dla ról z popupami */}
+        {showCallToggle && (
+          <button
+            onClick={toggleNotifications}
+            title={notificationsEnabled ? tCalls('notificationsOn') : tCalls('notificationsOff')}
+            aria-label={notificationsEnabled ? tCalls('notificationsOn') : tCalls('notificationsOff')}
+            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            style={{
+              backgroundColor: 'var(--surface)',
+              color: notificationsEnabled ? 'var(--accent)' : 'var(--text-muted)',
+            }}
+          >
+            {notificationsEnabled ? <Bell size={16} /> : <BellOff size={16} />}
+          </button>
+        )}
+
         {/* Przełącznik języka PL / EN */}
         <div
           className="flex items-center gap-0.5 rounded-lg p-1"

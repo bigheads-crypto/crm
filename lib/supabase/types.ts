@@ -370,6 +370,30 @@ export interface Client {
 export type ClientInsert = Omit<Client, 'id' | 'created_at'>
 export type ClientUpdate = Partial<ClientInsert>
 
+// Rozmowy telefoniczne (integracja QUO — n8n zapisuje przez webhook + Realtime)
+export interface Call {
+  id: number
+  quo_call_id: string | null
+  created_at: string
+  phone: string | null
+  direction: 'incoming' | 'outgoing' | null
+  status: 'ringing' | 'completed' | 'missed' | null
+  duration_seconds: number | null
+  recording_url: string | null
+  quo_user_id: string | null
+  answered_by_name: string | null
+  is_known_client: boolean
+  client_id: number | null
+  client_name: string | null
+  notes: string | null
+  machine_interest: string | null
+  lead_created: boolean
+  handled: boolean
+}
+
+export type CallInsert = Omit<Call, 'id' | 'created_at'>
+export type CallUpdate = Partial<CallInsert>
+
 // Support Backlog Log — pojedyncza interakcja w ramach sprawy
 export interface SupportBacklogLog {
   id: number

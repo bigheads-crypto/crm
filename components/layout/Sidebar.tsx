@@ -9,7 +9,7 @@ import {
   HeadphonesIcon, ClipboardList, MessageCircle, Users, Cpu, Settings,
   Globe, Server, Shield, Activity, ChevronLeft, ChevronRight, ChevronDown,
   BookMarked, AlertTriangle, ThumbsUp, Package, Layers, Cable, CircuitBoard,
-  FileCode, UserRound, GripVertical,
+  FileCode, UserRound, GripVertical, Phone,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -55,6 +55,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'salesQuality', href: '/sales-quality', icon: Star },
   { key: 'sales', href: '/sales', icon: ShoppingCart },
   { key: 'salesTextLog', href: '/sales-text-log', icon: MessageSquare },
+  { key: 'calls', href: '/calls', icon: Phone },
   { key: 'supportCases', href: '/support-cases', icon: HeadphonesIcon },
   { key: 'supportBacklog', href: '/support-backlog', icon: BookMarked },
   { key: 'supportLog', href: '/support-log', icon: ClipboardList },

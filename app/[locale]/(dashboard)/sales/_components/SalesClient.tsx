@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useForm, Controller, useWatch } from 'react-hook-form'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { DataTable, Column } from '@/components/shared/DataTable'
@@ -44,57 +44,6 @@ const schema = z.object({
   notes: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
-
-function SalesmanAutocomplete({ salesmen, value, onChange, inputStyle: style }: {
-  salesmen: string[]
-  value: string
-  onChange: (v: string) => void
-  inputStyle: React.CSSProperties
-}) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const filtered = salesmen.filter(s => s.toLowerCase().includes((value ?? '').toLowerCase()))
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [])
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
-      <input
-        value={value}
-        style={style}
-        autoComplete="off"
-        onFocus={() => setOpen(true)}
-        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
-      />
-      {open && filtered.length > 0 && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-          backgroundColor: 'var(--surface-2)', border: '1px solid var(--border)',
-          borderRadius: '8px', marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-        }}>
-          {filtered.map(s => (
-            <div
-              key={s}
-              onMouseDown={(e) => { e.preventDefault(); onChange(s); setOpen(false) }}
-              style={{ padding: '8px 12px', fontSize: '14px', cursor: 'pointer', color: 'var(--text)' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(224,120,24,0.12)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              {s}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function FormSection({ title }: { title: string }) {
   return (
@@ -257,7 +206,9 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
           .maybeSingle()
         if (lastSale?.shipping_details) setValue('shipping_details', lastSale.shipping_details)
         if (lastSale?.invoice_details) setValue('invoice_details', lastSale.invoice_details)
-        if (lastSale?.first_contact) setValue('first_contact', lastSale.first_contact)
+        // Pierwszy kontakt: z poprzedniego zamówienia, a dla świeżego leada — opiekun klienta
+        const firstContact = lastSale?.first_contact || client.assigned_salesman
+        if (firstContact) setValue('first_contact', firstContact)
         setAutofilled(true)
         return
       }
@@ -362,8 +313,8 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openAdd = () => {
-    reset({ sale_status: 'new', salesman: currentSalesman })
+  const openAdd = (prefillPhone?: string) => {
+    reset({ sale_status: 'new', salesman: currentSalesman, ...(prefillPhone ? { phone: prefillPhone } : {}) })
     setEditRow(null)
     setFormError(null)
     setAutofilled(false)
@@ -373,6 +324,27 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     setFormItems([{ zestaw_id: '', quantity: '1', price: '' }])
     setModalOpen(true)
   }
+
+  // Prefill „Dodaj zamówienie" z popupu rozmowy QUO (CallPopupHost).
+  // Dwie ścieżki: event okna (już na /sales) + sessionStorage (po nawigacji na /sales).
+  useEffect(() => {
+    if (!canWrite) return
+    function openPrefilled(phone: string) {
+      try { sessionStorage.removeItem('crm:newOrderPhone') } catch { /* ignore */ }
+      openAdd(phone || undefined)
+    }
+    function onOpenNewOrder(e: Event) {
+      const phone = (e as CustomEvent<{ phone?: string }>).detail?.phone ?? ''
+      openPrefilled(phone)
+    }
+    window.addEventListener('crm:openNewOrder', onOpenNewOrder)
+    try {
+      const stored = sessionStorage.getItem('crm:newOrderPhone')
+      if (stored !== null) openPrefilled(stored)
+    } catch { /* ignore */ }
+    return () => window.removeEventListener('crm:openNewOrder', onOpenNewOrder)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const openEdit = async (row: Sale) => {
     reset({
       phone: row.phone ?? '',
@@ -518,7 +490,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         columns={columns as unknown as Column<Record<string, unknown>>[]}
         totalCount={count} page={page} onPageChange={setPage} pageSize={PAGE_SIZE}
         filterTabs={filterTabs} activeFilter={filter} onFilterChange={(v) => { setFilter(v); setPage(1) }}
-        onAdd={canWrite ? openAdd : undefined}
+        onAdd={canWrite ? () => openAdd() : undefined}
         onEdit={canEdit ? (row) => { void openEdit(row as unknown as Sale) } : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Sale) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj zamówienie"
@@ -580,10 +552,10 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
             />
           </FormField>
           <FormField label="Pierwszy kontakt">
-            <Controller name="first_contact" control={control}
-              render={({ field }) => (
-                <SalesmanAutocomplete salesmen={salesmen} value={field.value ?? ''} onChange={field.onChange} inputStyle={inputStyle} />
-              )}
+            <input
+              {...register('first_contact')}
+              readOnly
+              style={{ ...inputStyle, backgroundColor: 'var(--surface-2)', color: 'var(--text-muted)', cursor: 'default' }}
             />
           </FormField>
           <div className="col-span-2">

@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Navbar } from '@/components/layout/Navbar'
+import { CallPopupHost } from '@/components/shared/CallPopupHost'
 import { createClient } from '@/lib/supabase/server'
 import { getAllowedTabs } from '@/lib/permissions'
 import type { Role } from '@/lib/supabase/types'
@@ -36,6 +37,9 @@ export default async function DashboardLayout({
   const userEmail = user.email ?? ''
   const allowedTabs = await getAllowedTabs(role)
 
+  // Popupy rozmów (QUO) tylko dla handlowca (i admina na czas testów)
+  const showCallPopups = role === 'handlowiec' || role === 'admin'
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Sidebar po lewej */}
@@ -43,11 +47,14 @@ export default async function DashboardLayout({
 
       {/* Główna część — Navbar + treść */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Navbar userEmail={userEmail} locale={locale} />
+        <Navbar userEmail={userEmail} locale={locale} showCallToggle={showCallPopups} />
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
+
+      {/* Popupy rozmów telefonicznych (QUO) — globalny overlay */}
+      {showCallPopups && <CallPopupHost salesmanName={profile?.full_name ?? ''} />}
     </div>
   )
 }
