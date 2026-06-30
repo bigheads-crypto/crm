@@ -1,18 +1,22 @@
 // Pomocnicze funkcje autoryzacyjne (tylko serwer)
 
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Profile, Role } from '@/lib/supabase/types'
 
-// Pobiera aktualnego użytkownika lub null
-export async function getCurrentUser() {
+// Pobiera aktualnego użytkownika lub null.
+// `cache()` deduplikuje wywołania w obrębie JEDNEGO żądania (layout + page + reszta
+// drzewa RSC współdzielą jeden round-trip do Supabase Auth zamiast 3 osobnych).
+export const getCurrentUser = cache(async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user
-}
+})
 
-// Pobiera profil użytkownika z rolą
-export async function getUserProfile(userId: string): Promise<Profile | null> {
+// Pobiera profil użytkownika z rolą. Również `cache()` — jedno zapytanie `profiles`
+// na żądanie, niezależnie ile komponentów go potrzebuje.
+export const getUserProfile = cache(async (userId: string): Promise<Profile | null> => {
   const supabase = await createClient()
   const { data } = await supabase
     .from('profiles')
@@ -20,7 +24,7 @@ export async function getUserProfile(userId: string): Promise<Profile | null> {
     .eq('id', userId)
     .single()
   return data as Profile | null
-}
+})
 
 // Pobiera zalogowanego użytkownika i profil — redirect do login jeśli brak sesji
 export async function requireAuth(locale: string = 'pl') {

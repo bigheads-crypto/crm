@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Navbar } from '@/components/layout/Navbar'
 import { CallPopupHost } from '@/components/shared/CallPopupHost'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, getUserProfile } from '@/lib/auth/helpers'
 import { getAllowedTabs } from '@/lib/permissions'
 import type { Role } from '@/lib/supabase/types'
 
@@ -18,20 +18,16 @@ export default async function DashboardLayout({
   // W Next.js 16 params jest Promise
   const { locale } = await params
 
-  // Sprawdź czy użytkownik jest zalogowany
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Sprawdź czy użytkownik jest zalogowany. Wspólne (cache'owane) helpery — ten sam
+  // getUser i profil są reużyte przez requireAuth() w page.tsx (zero dodatkowych round-tripów).
+  const user = await getCurrentUser()
 
   if (!user) {
     redirect(`/${locale}/login`)
   }
 
   // Pobierz profil z rolą
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .single()
+  const profile = await getUserProfile(user.id)
 
   const role = (profile?.role ?? 'handlowiec') as Role
   const userEmail = user.email ?? ''
