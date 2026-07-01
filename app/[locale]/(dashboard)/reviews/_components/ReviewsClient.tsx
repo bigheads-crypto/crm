@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -134,7 +135,7 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const openAdd = () => {
     reset({ technik: userName, contact: '', channel: undefined, napisano: false, napisac: false, wystawil: false, google_name: '' })

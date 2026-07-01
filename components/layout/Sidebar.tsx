@@ -5,8 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  LayoutDashboard, Handshake, Star, ShoppingCart, MessageSquare,
-  HeadphonesIcon, ClipboardList, MessageCircle, Users, Cpu, Settings,
+  LayoutDashboard, ShoppingCart, Users, Cpu, Settings,
   Globe, Server, Shield, Activity, ChevronLeft, ChevronRight, ChevronDown,
   BookMarked, AlertTriangle, ThumbsUp, Package, Layers, Cable, CircuitBoard,
   FileCode, UserRound, GripVertical, Phone,
@@ -51,15 +50,9 @@ function entryId(entry: NavEntry) {
 const NAV_ENTRIES: NavEntry[] = [
   { key: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { key: 'clients', href: '/clients', icon: UserRound },
-  { key: 'salesDeals', href: '/sales-deals', icon: Handshake },
-  { key: 'salesQuality', href: '/sales-quality', icon: Star },
   { key: 'sales', href: '/sales', icon: ShoppingCart },
-  { key: 'salesTextLog', href: '/sales-text-log', icon: MessageSquare },
   { key: 'calls', href: '/calls', icon: Phone },
-  { key: 'supportCases', href: '/support-cases', icon: HeadphonesIcon },
   { key: 'supportBacklog', href: '/support-backlog', icon: BookMarked },
-  { key: 'supportLog', href: '/support-log', icon: ClipboardList },
-  { key: 'supportTextLog', href: '/support-text-log', icon: MessageCircle },
   { key: 'candidates', href: '/candidates', icon: Users },
   { key: 'machines', href: '/machines', icon: Cpu },
   { key: 'machineIssues', href: '/machine-issues', icon: AlertTriangle },

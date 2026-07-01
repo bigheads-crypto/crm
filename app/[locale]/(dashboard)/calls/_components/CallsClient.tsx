@@ -5,6 +5,7 @@
 // jak w pozostałych modułach.
 
 import { useState, useEffect, useCallback } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { useTranslations } from 'next-intl'
 import { PhoneIncoming, PhoneOutgoing } from 'lucide-react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
@@ -55,7 +56,7 @@ export function CallsClient({ initialData, initialCount }: Props) {
     setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const statusLabel = (status: string) =>
     status === 'completed'

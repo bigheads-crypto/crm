@@ -3,14 +3,8 @@
     "dashboard": "Dashboard",
     "clients": "Clients",
     "calls": "Calls",
-    "salesDeals": "Sales Deals",
-    "salesQuality": "Sales Quality",
     "sales": "Orders",
-    "salesTextLog": "SMS Sales",
-    "supportCases": "Support Cases",
     "supportBacklog": "Support Backlog",
-    "supportLog": "Support Log",
-    "supportTextLog": "SMS Support",
     "candidates": "Candidates",
     "machines": "Machines",
     "machineIssues": "Machine Issues",
@@ -90,34 +84,6 @@
     "no": "No"
   },
   "modules": {
-    "salesDeals": {
-      "title": "Sales Deals",
-      "phone": "Phone",
-      "clientName": "Client",
-      "salesman": "Salesman",
-      "status": "Status",
-      "category": "Category",
-      "email": "Email",
-      "detectedEngine": "Detected engine",
-      "currentSummary": "Summary",
-      "shippingDetails": "Shipping address",
-      "lastContact": "Last contact",
-      "createdAt": "Created"
-    },
-    "salesQuality": {
-      "title": "Sales Quality",
-      "salesman": "Salesman",
-      "phone": "Phone",
-      "clientsName": "Client",
-      "category": "Category",
-      "rating": "Rating",
-      "feedback": "Feedback",
-      "detectedEngine": "Engine",
-      "summary": "Summary",
-      "duration": "Duration (s)",
-      "dealId": "Deal ID",
-      "createdAt": "Date"
-    },
     "sales": {
       "title": "Orders",
       "salesman": "Salesman",
@@ -130,50 +96,6 @@
       "paypalInvoice": "PayPal",
       "company": "Company",
       "machineId": "Machine ID",
-      "createdAt": "Date"
-    },
-    "salesTextLog": {
-      "title": "SMS Sales",
-      "phone": "Phone",
-      "direction": "Direction",
-      "fullMessage": "Message",
-      "summary": "Summary",
-      "category": "Category",
-      "dealId": "Deal ID",
-      "createdAt": "Date"
-    },
-    "supportCases": {
-      "title": "Support Cases",
-      "phone": "Phone",
-      "clientsName": "Client",
-      "status": "Status",
-      "lastAgent": "Agent",
-      "currentCategory": "Category",
-      "currentProblemSummary": "Problem",
-      "detectedEngine": "Engine",
-      "lastContact": "Last contact",
-      "createdAt": "Created"
-    },
-    "supportLog": {
-      "title": "Support Log",
-      "supportAgent": "Agent",
-      "phone": "Phone",
-      "clientsName": "Client",
-      "category": "Category",
-      "detectedEngine": "Engine",
-      "summary": "Summary",
-      "duration": "Duration (s)",
-      "problemDescription": "Problem",
-      "caseId": "Case ID",
-      "createdAt": "Date"
-    },
-    "supportTextLog": {
-      "title": "SMS Support",
-      "phone": "Phone",
-      "direction": "Direction",
-      "fullMessage": "Message",
-      "summary": "Summary",
-      "caseId": "Case ID",
       "createdAt": "Date"
     },
     "candidates": {

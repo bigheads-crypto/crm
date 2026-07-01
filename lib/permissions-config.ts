@@ -22,14 +22,8 @@ export const PERM_TYPES: { key: keyof TabPerms; label: string }[] = [
 
 export const TAB_DEFS: TabDef[] = [
   { key: 'dashboard', label: 'Dashboard' },
-  { key: 'sales-deals', label: 'Transakcje' },
-  { key: 'sales-quality', label: 'Jakość sprzedaży' },
   { key: 'sales', label: 'Zamówienia' },
-  { key: 'sales-text-log', label: 'SMS Sprzedaż' },
-  { key: 'support-cases', label: 'Sprawy support' },
   { key: 'support-backlog', label: 'Support Backlog' },
-  { key: 'support-log', label: 'Log support' },
-  { key: 'support-text-log', label: 'SMS Support' },
   { key: 'candidates', label: 'Kandydaci' },
   { key: 'machines', label: 'Maszyny' },
   { key: 'machine-issues', label: 'Problemy maszyn' },
@@ -49,14 +43,8 @@ export const TAB_DEFS: TabDef[] = [
 // Które role mogą widzieć daną zakładkę (domyślne)
 const DEFAULT_VIEW: Record<string, Role[]> = {
   'dashboard': ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'],
-  'sales-deals': ['admin', 'handlowiec', 'manager'],
-  'sales-quality': ['admin', 'handlowiec', 'manager'],
   'sales': ['admin', 'handlowiec', 'logistyka', 'manager'],
-  'sales-text-log': ['admin', 'handlowiec', 'manager'],
-  'support-cases': ['admin', 'support', 'manager'],
   'support-backlog': ['admin', 'support', 'manager'],
-  'support-log': ['admin', 'support', 'manager'],
-  'support-text-log': ['admin', 'support', 'manager'],
   'candidates': ['admin', 'hr', 'manager'],
   'machines': ['admin', 'handlowiec', 'logistyka', 'manager'],
   'machine-issues': ['admin', 'handlowiec', 'support', 'logistyka', 'manager'],

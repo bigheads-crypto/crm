@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
+import { useFetchOnParamChange, useFilterOptions } from '@/lib/hooks/table-data'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Sale, SaleItem, Zestaw, Client, Role } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
@@ -73,7 +74,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [salesmen, setSalesmen] = useState<string[]>([])
+  const filterOptionsMap = useFilterOptions('Sales', ['salesman'])
   const [zestawy, setZestawy] = useState<Zestaw[]>([])
   type ItemRow = { zestaw_id: string; quantity: string; price: string }
   const [formItems, setFormItems] = useState<ItemRow[]>([])
@@ -88,13 +89,8 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
   useEffect(() => {
-    const supabase = createClient()
-    Promise.all([
-      supabase.from('Sales').select('salesman').not('salesman', 'is', null)
-        .then(({ data: s }) => setSalesmen([...new Set((s ?? []).map(r => r.salesman).filter(Boolean) as string[])].sort())),
-      supabase.from('Zestawy').select('*').order('nr', { ascending: true })
-        .then(({ data: z }) => setZestawy(z ?? [])),
-    ])
+    createClient().from('Zestawy').select('*').order('nr', { ascending: true })
+      .then(({ data: z }) => setZestawy(z ?? []))
   }, [])
 
   const zestawMap = useMemo(() =>
@@ -106,7 +102,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     { key: 'phone', header: 'Telefon', width: '130px' },
     { key: 'client_name', header: 'Klient' },
     { key: 'company', header: 'Firma' },
-    { key: 'salesman', header: 'Handlowiec', filterOptions: salesmen },
+    { key: 'salesman', header: 'Handlowiec', filterOptions: filterOptionsMap.salesman },
     {
       key: 'sale_status', header: 'Status', width: '120px',
       render: (v) => v ? <StatusBadge status={String(v)} colors={STATUS_COLORS} /> : '—',
@@ -136,7 +132,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
       key: 'created_at', header: 'Data', filterable: false, width: '100px',
       render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—',
     },
-  ], [salesmen, zestawMap, itemsMap])
+  ], [filterOptionsMap, zestawMap, itemsMap])
 
   const canDelete = canEdit
 
@@ -311,7 +307,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     setLoading(false)
   }, [page, columnFilters, filter, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const openAdd = (prefillPhone?: string) => {
     reset({ sale_status: 'new', salesman: currentSalesman, ...(prefillPhone ? { phone: prefillPhone } : {}) })

@@ -12,15 +12,9 @@ import { useCallNotificationsEnabled } from '@/hooks/useCallNotificationsEnabled
 // Mapowanie fragmentu URL na klucz tłumaczenia tytułu
 const PATH_TO_TITLE: Record<string, string> = {
   dashboard: 'Dashboard',
-  'sales-deals': 'Transakcje',
-  'sales-quality': 'Jakość sprzedaży',
   sales: 'Zamówienia',
-  'sales-text-log': 'SMS Sprzedaż',
   calls: 'Rozmowy',
-  'support-cases': 'Sprawy supportu',
   'support-backlog': 'Support Backlog',
-  'support-log': 'Log supportu',
-  'support-text-log': 'SMS Support',
   candidates: 'Kandydaci',
   machines: 'Maszyny',
   'machine-issues': 'Problemy maszyn',

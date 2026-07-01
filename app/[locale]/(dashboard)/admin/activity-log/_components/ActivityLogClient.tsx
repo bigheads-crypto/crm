@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { createClient } from '@/lib/supabase/client'
 import { Pagination } from '@/components/shared/Pagination'
 import { Modal } from '@/components/shared/Modal'
@@ -166,7 +167,7 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
     setLoading(false)
   }, [page, actionFilter])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const filterTabs = [
     { label: 'Wszystkie', value: 'all' },

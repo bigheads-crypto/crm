@@ -12,6 +12,7 @@ import { DueDateBadge, DaysLeftBadge, getDiffDays } from '@/components/shared/Ba
 import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
+import { useFetchOnParamChange, useFilterOptions } from '@/lib/hooks/table-data'
 import type { Domain } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
 
@@ -37,7 +38,7 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
   const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [providerOptions, setProviderOptions] = useState<string[]>([])
+  const filterOptionsMap = useFilterOptions('domains', ['provider'])
 
   const handleSort = (key: string, dir: 'asc' | 'desc') => { setSortKey(key); setSortDir(dir); setPage(1) }
 
@@ -45,18 +46,9 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
 
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-  useEffect(() => {
-    async function loadOptions() {
-      const supabase = createClient()
-      const { data: p } = await supabase.from('domains').select('provider').not('provider', 'is', null)
-      setProviderOptions([...new Set((p ?? []).map(r => r.provider).filter(Boolean) as string[])].sort())
-    }
-    loadOptions()
-  }, [])
-
   const columns = useMemo<Column<Domain>[]>(() => [
     { key: 'domain', header: 'Domena', sortable: true, filterable: true },
-    { key: 'provider', header: 'Dostawca', sortable: true, filterable: true, filterOptions: providerOptions },
+    { key: 'provider', header: 'Dostawca', sortable: true, filterable: true, filterOptions: filterOptionsMap.provider },
     {
       key: 'due_date',
       header: 'Data wygaśnięcia',
@@ -75,7 +67,7 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
       sortable: true,
       render: (v) => v ? new Date(v as string).toLocaleDateString('pl-PL') : '—',
     },
-  ], [providerOptions])
+  ], [filterOptionsMap])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -90,7 +82,7 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
     setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const openAdd = () => { reset({}); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: Domain) => {

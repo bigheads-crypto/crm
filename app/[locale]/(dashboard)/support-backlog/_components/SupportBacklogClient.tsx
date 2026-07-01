@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -173,7 +174,7 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, statusFilter, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   // Ładowanie logów i powiązanego klienta po wyborze sprawy
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -143,7 +144,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const openAdd = () => {
     reset({ nr: '', name: '', emulator_program: '', wiazka: '', notes: '', instrukcja: '', price: '', price_currency: 'USD' })

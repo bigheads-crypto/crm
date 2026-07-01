@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -69,6 +70,14 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   const [formError, setFormError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState('component_type')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const [formProgramOptions, setFormProgramOptions] = useState<string[]>([])
+
+  useEffect(() => {
+    createClient().from('Software').select('name').order('name').then(({ data: rows }) => {
+      setFormProgramOptions([...new Set((rows ?? []).map(r => r.name))])
+    })
+  }, [])
 
   // Program modal state
   const [programModalOpen, setProgramModalOpen] = useState(false)
@@ -222,7 +231,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const openAdd = () => {
     reset({ component_type: '', name: '', program: '', stock_qty: '0', notes: '' })
@@ -336,7 +345,12 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
           {watchedType === 'płytka zaprogramowana' && (
             <div className="col-span-2">
               <FormField label={t('hardware.colProgram')}>
-                <input {...register('program')} style={inputStyle} placeholder="np. Mercedes MP3 v2.1" />
+                <select {...register('program')} style={inputStyle}>
+                  <option value="">{t('selectPlaceholder')}</option>
+                  {formProgramOptions.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
               </FormField>
             </div>
           )}

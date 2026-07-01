@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useFetchOnParamChange } from '@/lib/hooks/table-data'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -60,7 +61,7 @@ export function MachineIssuesClient({ initialData, initialCount, canWrite, canEd
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useFetchOnParamChange(fetchData)
 
   const openAdd = () => { reset({ model: '', year: '', problem: '' }); setEditRow(null); setFormError(null); setModalOpen(true) }
   const openEdit = (row: MachineIssue) => {
