@@ -21,23 +21,9 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-// Ścieżka po zalogowaniu zależna od roli
+// Ścieżka po zalogowaniu — wszystkie role trafiają na dashboard.
 function getRedirectPath(role: Role, locale: string): string {
-  switch (role) {
-    case 'admin':
-    case 'manager':
-      return `/${locale}/dashboard`
-    case 'handlowiec':
-      return `/${locale}/sales-deals`
-    case 'support':
-      return `/${locale}/support-cases`
-    case 'hr':
-      return `/${locale}/candidates`
-    case 'logistyka':
-      return `/${locale}/sales`
-    default:
-      return `/${locale}/dashboard`
-  }
+  return `/${locale}/dashboard`
 }
 
 export default function LoginPage({

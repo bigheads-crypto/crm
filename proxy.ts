@@ -17,23 +17,10 @@ const handleI18nRouting = createIntlMiddleware({
   localePrefix: 'always',
 })
 
-// Pomocnik — zwraca ścieżkę przekierowania po zalogowaniu
+// Pomocnik — zwraca ścieżkę przekierowania po zalogowaniu.
+// Wszystkie role trafiają na dashboard (jest widoczny dla każdej roli).
 function getRedirectPath(role: Role, locale: string): string {
-  switch (role) {
-    case 'admin':
-    case 'manager':
-      return `/${locale}/dashboard`
-    case 'handlowiec':
-      return `/${locale}/sales-deals`
-    case 'support':
-      return `/${locale}/support-cases`
-    case 'hr':
-      return `/${locale}/candidates`
-    case 'logistyka':
-      return `/${locale}/sales`
-    default:
-      return `/${locale}/dashboard`
-  }
+  return `/${locale}/dashboard`
 }
 
 export async function proxy(request: NextRequest) {

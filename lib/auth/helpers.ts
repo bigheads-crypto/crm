@@ -46,21 +46,8 @@ export async function requireAuth(locale: string = 'pl') {
   }
 }
 
-// Ścieżka przekierowania po zalogowaniu zależna od roli
+// Ścieżka przekierowania po zalogowaniu.
+// Wszystkie role trafiają na dashboard (jest widoczny dla każdej roli).
 export function getRedirectPath(role: Role, locale: string = 'pl'): string {
-  switch (role) {
-    case 'admin':
-    case 'manager':
-      return `/${locale}/dashboard`
-    case 'handlowiec':
-      return `/${locale}/sales-deals`
-    case 'support':
-      return `/${locale}/support-cases`
-    case 'hr':
-      return `/${locale}/candidates`
-    case 'logistyka':
-      return `/${locale}/sales`
-    default:
-      return `/${locale}/dashboard`
-  }
+  return `/${locale}/dashboard`
 }
