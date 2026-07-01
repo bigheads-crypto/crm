@@ -63,6 +63,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Hardware | null>(null)
   const [deleteRow, setDeleteRow] = useState<Hardware | null>(null)
@@ -225,7 +226,9 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     let query = supabase.from('Hardware').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -312,6 +315,8 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
         onEdit={canEdit ? (row) => openEdit(row as unknown as Hardware) : undefined}
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Hardware) : undefined}
         loading={loading}
+        loadError={loadError}
+        onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}
         addLabel={t('hardware.addLabel')}

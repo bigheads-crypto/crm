@@ -49,6 +49,7 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Product | null>(null)
   const [deleteRow, setDeleteRow] = useState<Product | null>(null)
@@ -137,7 +138,9 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
     let query = supabase.from('Products').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -275,6 +278,7 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
         onEdit={canEdit ? (row) => openEdit(row as unknown as Product) : undefined}
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Product) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canEdit} addLabel={t('emulatory.addLabel')}
+        loadError={loadError} onRetry={fetchData}
         sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
         columnFilters={columnFilters}
         onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}

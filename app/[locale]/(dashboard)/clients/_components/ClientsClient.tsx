@@ -69,6 +69,7 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Client | null>(null)
   const [deleteRow, setDeleteRow] = useState<Client | null>(null)
@@ -92,7 +93,9 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range(from, to)
 
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData((rows as Client[]) ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -269,6 +272,8 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
         page={page}
         pageSize={PAGE_SIZE}
         loading={loading}
+        loadError={loadError}
+        onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}
         columnFilters={columnFilters}

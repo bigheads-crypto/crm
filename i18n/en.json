@@ -34,6 +34,15 @@
     "emailPlaceholder": "your@email.com",
     "passwordPlaceholder": "••••••••"
   },
+  "errors": {
+    "genericTitle": "Something went wrong",
+    "genericMessage": "An unexpected error occurred. Try again or return to the dashboard.",
+    "retry": "Try again",
+    "backHome": "Back to dashboard",
+    "notFoundTitle": "Page not found",
+    "notFoundMessage": "The page you are looking for doesn't exist or has been moved.",
+    "loadFailed": "Failed to load data. Check your connection and try again."
+  },
   "dashboard": {
     "title": "Dashboard",
     "activeDeals": "Active deals",

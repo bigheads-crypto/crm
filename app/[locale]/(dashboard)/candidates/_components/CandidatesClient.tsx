@@ -57,6 +57,7 @@ export function CandidatesClient({ initialData, initialCount, canWrite, canEdit 
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<OLXCandidate | null>(null)
   const [deleteRow, setDeleteRow] = useState<OLXCandidate | null>(null)
@@ -77,7 +78,9 @@ export function CandidatesClient({ initialData, initialCount, canWrite, canEdit 
     let query = supabase.from('OLX').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
@@ -130,6 +133,7 @@ export function CandidatesClient({ initialData, initialCount, canWrite, canEdit 
         onEdit={canEdit ? (row) => openEdit(row as unknown as OLXCandidate) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as OLXCandidate) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj kandydata"
+        loadError={loadError} onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}

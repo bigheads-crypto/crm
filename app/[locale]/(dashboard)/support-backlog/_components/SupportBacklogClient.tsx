@@ -68,6 +68,7 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [sortKey, setSortKey] = useState('updated_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [filterOptionsMap, setFilterOptionsMap] = useState<Record<string, string[]>>({})
@@ -170,7 +171,9 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
     if (statusFilter !== 'all') query = query.eq('status', statusFilter)
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, statusFilter, sortKey, sortDir])
 
@@ -357,6 +360,8 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
         onEdit={(row) => openDetail(row as unknown as SupportBacklog)}
         onDelete={(row) => setDeleteRow(row as unknown as SupportBacklog)}
         loading={loading}
+        loadError={loadError}
+        onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}
         sortKey={sortKey}

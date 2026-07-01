@@ -153,6 +153,7 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
   const [page, setPage] = useState(1)
   const [actionFilter, setActionFilter] = useState('all')
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -161,7 +162,9 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
     let query = supabase.from('activity_logs').select('*', { count: 'exact' })
     if (actionFilter !== 'all') query = query.eq('action', actionFilter)
     query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -214,6 +217,23 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
                   Ładowanie...
+                </td>
+              </tr>
+            ) : loadError ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      Nie udało się załadować danych. Sprawdź połączenie i spróbuj ponownie.
+                    </span>
+                    <button
+                      onClick={fetchData}
+                      className="rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+                      style={{ backgroundColor: 'var(--accent)', color: '#ffffff' }}
+                    >
+                      Spróbuj ponownie
+                    </button>
+                  </div>
                 </td>
               </tr>
             ) : data.length === 0 ? (

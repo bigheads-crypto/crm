@@ -37,6 +37,7 @@ export function MachineIssuesClient({ initialData, initialCount, canWrite, canEd
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<MachineIssue | null>(null)
   const [deleteRow, setDeleteRow] = useState<MachineIssue | null>(null)
@@ -57,7 +58,9 @@ export function MachineIssuesClient({ initialData, initialCount, canWrite, canEd
     let query = supabase.from('Machine Issues').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
@@ -106,6 +109,7 @@ export function MachineIssuesClient({ initialData, initialCount, canWrite, canEd
         onEdit={canEdit ? (row) => openEdit(row as unknown as MachineIssue) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as MachineIssue) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj problem"
+        loadError={loadError} onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}

@@ -34,6 +34,15 @@
     "emailPlaceholder": "twoj@email.com",
     "passwordPlaceholder": "••••••••"
   },
+  "errors": {
+    "genericTitle": "Coś poszło nie tak",
+    "genericMessage": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie lub wróć do panelu.",
+    "retry": "Spróbuj ponownie",
+    "backHome": "Wróć do panelu",
+    "notFoundTitle": "Strona nie znaleziona",
+    "notFoundMessage": "Strona, której szukasz, nie istnieje lub została przeniesiona.",
+    "loadFailed": "Nie udało się załadować danych. Sprawdź połączenie i spróbuj ponownie."
+  },
   "dashboard": {
     "title": "Dashboard",
     "activeDeals": "Aktywne transakcje",

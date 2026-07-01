@@ -2,7 +2,8 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Filter, ArrowUp, ArrowDown, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Filter, ArrowUp, ArrowDown, X, AlertTriangle, RotateCw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Pagination } from './Pagination'
 import type { ColumnFilters, ColumnFilter, FilterCondition } from '@/lib/supabase/filters'
 
@@ -42,6 +43,10 @@ export interface DataTableProps<T> {
   onColumnFiltersChange?: (filters: ColumnFilters) => void
   rowActions?: (row: T) => React.ReactNode
   onRowDoubleClick?: (row: T) => void
+  /** true = ostatni fetch zwrócił błąd (np. brak połączenia) → pokaż banner zamiast „Brak wyników" */
+  loadError?: boolean
+  /** ponów ostatni fetch (przycisk „Spróbuj ponownie") */
+  onRetry?: () => void
   // legacy — kept for backward compat
   searchValue?: string
   onSearchChange?: (val: string) => void
@@ -84,7 +89,10 @@ export function DataTable<T extends Record<string, unknown>>({
   onColumnFiltersChange,
   rowActions,
   onRowDoubleClick,
+  loadError = false,
+  onRetry,
 }: DataTableProps<T>) {
+  const tErr = useTranslations('errors')
   const totalPages = Math.ceil(totalCount / pageSize)
   const showActions = (canEdit && onEdit) || (canDelete && onDelete) || !!rowActions
   const activeFilterCount = Object.keys(externalFilters ?? {}).length
@@ -399,6 +407,28 @@ export function DataTable<T extends Record<string, unknown>>({
                   )}
                 </tr>
               ))
+            ) : loadError ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (showActions ? 1 : 0)}
+                  className="px-4 py-12 text-center"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <AlertTriangle size={24} style={{ color: 'var(--danger)' }} />
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tErr('loadFailed')}</p>
+                    {onRetry && (
+                      <button
+                        onClick={onRetry}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+                        style={{ backgroundColor: 'var(--accent)', color: '#ffffff' }}
+                      >
+                        <RotateCw size={13} />
+                        {tErr('retry')}
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
             ) : data.length === 0 ? (
               <tr>
                 <td

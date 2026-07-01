@@ -67,6 +67,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Sale | null>(null)
   const [deleteRow, setDeleteRow] = useState<Sale | null>(null)
@@ -287,7 +288,9 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     if (filter !== 'all') query = query.eq('sale_status', filter)
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? [])
     setCount(total ?? 0)
     if (rows && rows.length > 0) {
@@ -490,6 +493,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         onEdit={canEdit ? (row) => { void openEdit(row as unknown as Sale) } : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Sale) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj zamówienie"
+        loadError={loadError} onRetry={fetchData}
         sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
         columnFilters={columnFilters}
         onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}

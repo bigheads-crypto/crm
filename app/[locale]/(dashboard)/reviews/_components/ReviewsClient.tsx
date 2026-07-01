@@ -71,6 +71,7 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Review | null>(null)
   const [deleteRow, setDeleteRow] = useState<Review | null>(null)
@@ -131,7 +132,9 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
     let query = supabase.from('Opinie').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
@@ -187,6 +190,7 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
         onEdit={canEdit ? (row) => openEdit(row as unknown as Review) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Review) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj opinię"
+        loadError={loadError} onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}

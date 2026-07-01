@@ -59,6 +59,7 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
   const [page, setPage] = useState(1)
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Wiazka | null>(null)
   const [deleteRow, setDeleteRow] = useState<Wiazka | null>(null)
@@ -108,7 +109,9 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
     let query = supabase.from('Wiazki').select('*', { count: 'exact' })
     query = applyColumnFilters(query, columnFilters)
     query = query.order('product_line', { ascending: true }).order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-    const { data: rows, count: total } = await query
+    const { data: rows, count: total, error } = await query
+    if (error) { setLoadError(true); setLoading(false); return }
+    setLoadError(false)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -184,6 +187,8 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
         onEdit={canEdit ? (row) => openEdit(row as unknown as Wiazka) : undefined}
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Wiazka) : undefined}
         loading={loading}
+        loadError={loadError}
+        onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}
         addLabel={t('wiazki.addLabel')}
