@@ -15,6 +15,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Review } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const CHANNELS = ['Telefon', 'WhatsApp', 'WhatsApp Opera', 'Email'] as const
 
@@ -72,6 +74,8 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Review | null>(null)
   const [deleteRow, setDeleteRow] = useState<Review | null>(null)
@@ -133,8 +137,8 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Opinie', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
@@ -163,7 +167,7 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
     const { error } = editRow
       ? await supabase.from('Opinie').update(values).eq('id', editRow.id)
       : await supabase.from('Opinie').insert(values)
-    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Opinie', operation: editRow ? 'update' : 'insert' })); return }
     const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'reviews', editRow?.id ?? null, `Opinia: ${values.contact} (${values.channel})`, changes)
     setModalOpen(false); fetchData()
@@ -174,7 +178,7 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Opinie').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Opinie', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'reviews', deleteRow.id, `Opinia: ${deleteRow.contact ?? ''} (${deleteRow.channel ?? ''})`)
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
@@ -190,7 +194,7 @@ export function ReviewsClient({ initialData, initialCount, userName, canWrite, c
         onEdit={canEdit ? (row) => openEdit(row as unknown as Review) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Review) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj opinię"
-        loadError={loadError} onRetry={fetchData}
+        loadError={loadError} loadErrorDetail={loadErrorDetail} onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}

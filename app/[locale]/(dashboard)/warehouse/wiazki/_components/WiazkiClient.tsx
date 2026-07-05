@@ -16,6 +16,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Wiazka } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const PRODUCT_LINE_OPTIONS = ['4DPF', 'comfylock']
 const PRODUCT_LINE_COLORS: Record<string, string> = {
@@ -60,6 +62,8 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Wiazka | null>(null)
   const [deleteRow, setDeleteRow] = useState<Wiazka | null>(null)
@@ -110,8 +114,8 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
     query = applyColumnFilters(query, columnFilters)
     query = query.order('product_line', { ascending: true }).order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Wiazki', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -151,7 +155,7 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
     const { error } = editRow
       ? await supabase.from('Wiazki').update(payload).eq('id', editRow.id)
       : await supabase.from('Wiazki').insert(payload)
-    if (error) { setFormError(t('saveError')); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Wiazki', operation: editRow ? 'update' : 'insert' })); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse-wiazki', editRow?.id ?? null, `Wiązka: ${values.name}`, changes)
     setModalOpen(false)
@@ -163,7 +167,7 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Wiazki').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Wiazki', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'warehouse-wiazki', deleteRow.id, `Wiązka: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -188,6 +192,7 @@ export function WiazkiClient({ initialData, initialCount, canWrite, canEdit }: P
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Wiazka) : undefined}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}

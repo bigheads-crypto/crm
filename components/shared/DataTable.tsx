@@ -45,6 +45,8 @@ export interface DataTableProps<T> {
   onRowDoubleClick?: (row: T) => void
   /** true = ostatni fetch zwrócił błąd (np. brak połączenia) → pokaż banner zamiast „Brak wyników" */
   loadError?: boolean
+  /** techniczne szczegóły błędu z describeSupabaseError().detail — pokazywane pod komunikatem */
+  loadErrorDetail?: string
   /** ponów ostatni fetch (przycisk „Spróbuj ponownie") */
   onRetry?: () => void
   // legacy — kept for backward compat
@@ -90,6 +92,7 @@ export function DataTable<T extends Record<string, unknown>>({
   rowActions,
   onRowDoubleClick,
   loadError = false,
+  loadErrorDetail,
   onRetry,
 }: DataTableProps<T>) {
   const tErr = useTranslations('errors')
@@ -416,6 +419,18 @@ export function DataTable<T extends Record<string, unknown>>({
                   <div className="flex flex-col items-center gap-3">
                     <AlertTriangle size={24} style={{ color: 'var(--danger)' }} />
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tErr('loadFailed')}</p>
+                    {loadErrorDetail && (
+                      <p
+                        className="text-xs rounded px-2 py-1.5"
+                        style={{
+                          fontFamily: 'monospace', color: 'var(--text-muted)',
+                          backgroundColor: 'var(--surface-2)', border: '1px solid var(--border)',
+                          maxWidth: '560px', wordBreak: 'break-word',
+                        }}
+                      >
+                        {loadErrorDetail}
+                      </p>
+                    )}
                     {onRetry && (
                       <button
                         onClick={onRetry}

@@ -16,6 +16,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Zestaw, Product, Wiazka } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const CURRENCY_OPTIONS = ['USD', 'EUR', 'GBP', 'PLN']
 
@@ -46,6 +48,8 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Zestaw | null>(null)
   const [deleteRow, setDeleteRow] = useState<Zestaw | null>(null)
@@ -140,8 +144,8 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Zestawy', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -187,7 +191,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     const { error } = editRow
       ? await supabase.from('Zestawy').update(payload).eq('id', editRow.id)
       : await supabase.from('Zestawy').insert(payload)
-    if (error) { setFormError(t('saveError')); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Zestawy', operation: editRow ? 'update' : 'insert' })); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse-zestawy', editRow?.id ?? null, `Zestaw nr ${values.nr}: ${values.name}`, changes)
     setModalOpen(false)
@@ -199,7 +203,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Zestawy').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Zestawy', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'warehouse-zestawy', deleteRow.id, `Zestaw nr ${deleteRow.nr}: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -224,6 +228,7 @@ export function SetsClient({ initialData, initialCount, canWrite, canEdit }: Pro
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Zestaw) : undefined}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}

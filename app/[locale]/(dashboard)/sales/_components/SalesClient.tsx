@@ -16,6 +16,8 @@ import { useFetchOnParamChange, useFilterOptions } from '@/lib/hooks/table-data'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Sale, SaleItem, Zestaw, Client, Role } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 import { normalizePhone } from '@/lib/phone'
 
 const PAYMENT_OPTIONS = ['PayPal', 'przelew']
@@ -68,6 +70,8 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Sale | null>(null)
   const [deleteRow, setDeleteRow] = useState<Sale | null>(null)
@@ -289,8 +293,8 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Sales', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     if (rows && rows.length > 0) {
@@ -417,7 +421,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         clientId = foundClient.id
       } else if (values.phone) {
         // Nowy klient — auto-INSERT do Clients
-        const { data: newClient } = await supabase
+        const { data: newClient, error: clientError } = await supabase
           .from('Clients')
           .insert({
             phone: values.phone ? normalizePhone(values.phone) : null,
@@ -431,6 +435,8 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
           })
           .select('id')
           .single()
+        // Błąd nie blokuje zapisu zamówienia — tylko powiązanie z klientem
+        if (clientError) showError(describeSupabaseError(clientError, { table: 'Clients', operation: 'insert' }))
         if (newClient) clientId = newClient.id
       }
     }
@@ -438,19 +444,20 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     let saleId: number
     if (editRow) {
       const { error } = await supabase.from('Sales').update({ ...payload, client_id: clientId }).eq('id', editRow.id)
-      if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+      if (error) { showError(describeSupabaseError(error, { table: 'Sales', operation: 'update' })); return }
       saleId = editRow.id
     } else {
       const { data: saved, error } = await supabase.from('Sales').insert({ ...payload, client_id: clientId }).select('id').single()
-      if (error || !saved) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+      if (error || !saved) { showError(describeSupabaseError(error, { table: 'Sales', operation: 'insert' })); return }
       saleId = saved.id
     }
 
     // Zapisz pozycje: usuń stare, wstaw nowe
-    await supabase.from('Sales Items').delete().eq('sale_id', saleId)
+    const { error: itemsDeleteError } = await supabase.from('Sales Items').delete().eq('sale_id', saleId)
+    if (itemsDeleteError) { showError(describeSupabaseError(itemsDeleteError, { table: 'Sales Items', operation: 'delete' })); return }
     const validItems = formItems.filter(item => item.zestaw_id)
     if (validItems.length > 0) {
-      await supabase.from('Sales Items').insert(
+      const { error: itemsInsertError } = await supabase.from('Sales Items').insert(
         validItems.map(item => ({
           sale_id: saleId,
           zestaw_id: Number(item.zestaw_id),
@@ -458,6 +465,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
           price: item.price ? Number(item.price) : null,
         }))
       )
+      if (itemsInsertError) { showError(describeSupabaseError(itemsInsertError, { table: 'Sales Items', operation: 'insert' })); return }
     }
 
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
@@ -471,7 +479,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Sales').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Sales', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'sales', deleteRow.id, `Zamówienie: ${deleteRow.company ?? deleteRow.phone}`)
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
@@ -493,7 +501,7 @@ export function SalesClient({ initialData, initialCount, role, canWrite, canEdit
         onEdit={canEdit ? (row) => { void openEdit(row as unknown as Sale) } : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Sale) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj zamówienie"
-        loadError={loadError} onRetry={fetchData}
+        loadError={loadError} loadErrorDetail={loadErrorDetail} onRetry={fetchData}
         sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
         columnFilters={columnFilters}
         onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}

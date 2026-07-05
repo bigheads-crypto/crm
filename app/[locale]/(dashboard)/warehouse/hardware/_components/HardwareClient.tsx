@@ -18,6 +18,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Hardware } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const COMPONENT_TYPE_OPTIONS = ['płytka surowa', 'płytka zaprogramowana', 'obudowa', 'rura']
 const COMPONENT_TYPE_COLORS: Record<string, string> = {
@@ -64,6 +66,8 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Hardware | null>(null)
   const [deleteRow, setDeleteRow] = useState<Hardware | null>(null)
@@ -159,7 +163,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
       saveError = error
     }
 
-    if (saveError) { setProgramError(t('hardware.programErrorSave')); setProgramLoading(false); return }
+    if (saveError) { showError(describeSupabaseError(saveError, { table: 'Hardware', operation: existing ? 'update' : 'insert' })); setProgramLoading(false); return }
 
     // Decrease raw board stock
     const { error: decreaseError } = await supabase
@@ -167,7 +171,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
       .update({ stock_qty: selectedBoard.stock_qty - programQty })
       .eq('id', selectedBoard.id)
 
-    if (decreaseError) { setProgramError(t('hardware.programErrorSave')); setProgramLoading(false); return }
+    if (decreaseError) { showError(describeSupabaseError(decreaseError, { table: 'Hardware', operation: 'update' })); setProgramLoading(false); return }
 
     void logActivity(supabase, 'create', 'warehouse-hardware', null,
       `Zaprogramowano ${programQty}x ${selectedBoard.name} → ${selectedProgram}`)
@@ -227,8 +231,8 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Hardware', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -268,7 +272,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     const { error } = editRow
       ? await supabase.from('Hardware').update(payload).eq('id', editRow.id)
       : await supabase.from('Hardware').insert(payload)
-    if (error) { setFormError(t('saveError')); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Hardware', operation: editRow ? 'update' : 'insert' })); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse-hardware', editRow?.id ?? null, `Hardware: ${values.name}`, changes)
     setModalOpen(false)
@@ -280,7 +284,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Hardware').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Hardware', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'warehouse-hardware', deleteRow.id, `Hardware: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -316,6 +320,7 @@ export function HardwareClient({ initialData, initialCount, canWrite, canEdit }:
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Hardware) : undefined}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}

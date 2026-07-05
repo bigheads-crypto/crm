@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { describeSupabaseError } from '@/lib/errors'
 import type { Call } from '@/lib/supabase/types'
 
 // Ile minut wstecz pobierać przy pierwszym ładowaniu — żeby otwarcie CRM nie
@@ -39,7 +40,8 @@ export function useCallNotifications(enabled: boolean = true): UseCallNotificati
       .limit(20)
 
     if (error) {
-      console.error('useCallNotifications: błąd pobierania', error.message)
+      // describeSupabaseError loguje pełny obiekt (kod PG, tabela, operacja) do konsoli
+      describeSupabaseError(error, { table: 'calls', operation: 'load' })
       return
     }
     setActiveCalls((data ?? []) as Call[])
@@ -103,7 +105,7 @@ export function useCallNotifications(enabled: boolean = true): UseCallNotificati
     const supabase = createClient()
     const { error } = await supabase.from('calls').update({ handled: true }).eq('id', id)
     if (error) {
-      console.error('useCallNotifications: błąd zamykania rozmowy', error.message)
+      describeSupabaseError(error, { table: 'calls', operation: 'update' })
     }
   }, [])
 

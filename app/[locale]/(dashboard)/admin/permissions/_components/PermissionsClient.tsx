@@ -7,6 +7,8 @@ import type { Role } from '@/lib/supabase/types'
 import type { TabPerms } from '@/lib/permissions-config'
 import { Modal } from '@/components/shared/Modal'
 import { FormField, FormActions, inputStyle } from '@/components/shared/forms'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 type PermMatrix = Record<string, Record<string, TabPerms>>
 
@@ -49,6 +51,7 @@ const PERM_SHORT: Record<keyof TabPerms, string> = {
 }
 
 export function PermissionsClient() {
+  const { showError } = useErrorToast()
   const [matrix, setMatrix] = useState<PermMatrix>({})
   const [customRoles, setCustomRoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -195,9 +198,9 @@ export function PermissionsClient() {
         return updated
       })
     } catch (err) {
-      alert((err as Error).message)
+      showError(describeSupabaseError({ message: (err as Error).message }, { table: '/api/admin/roles', operation: 'delete' }))
     }
-  }, [])
+  }, [showError])
 
   if (fetchError) {
     return (

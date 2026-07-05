@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { CALL_STATUS_COLORS, CALL_STATUS_OPTIONS, PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
 import type { Call } from '@/lib/supabase/types'
 
 const DIRECTION_OPTIONS = ['incoming', 'outgoing']
@@ -38,6 +39,7 @@ export function CallsClient({ initialData, initialCount }: Props) {
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
   const [sortKey, setSortKey] = useState<string>('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -52,8 +54,8 @@ export function CallsClient({ initialData, initialCount }: Props) {
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range(from, to)
 
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'calls', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData((rows as Call[]) ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -171,6 +173,7 @@ export function CallsClient({ initialData, initialCount }: Props) {
         pageSize={PAGE_SIZE}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}

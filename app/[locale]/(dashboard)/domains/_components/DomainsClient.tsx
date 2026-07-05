@@ -15,6 +15,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { useFetchOnParamChange, useFilterOptions } from '@/lib/hooks/table-data'
 import type { Domain } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const schema = z.object({
   domain: z.string().optional(),
@@ -32,6 +34,8 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Domain | null>(null)
   const [deleteRow, setDeleteRow] = useState<Domain | null>(null)
@@ -78,8 +82,8 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
     const dbSortKey = sortKey === 'days_left' ? 'due_date' : sortKey
     query = query.order(dbSortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'domains', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -109,7 +113,7 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
     const { error } = editRow
       ? await supabase.from('domains').update(payload).eq('id', editRow.id)
       : await supabase.from('domains').insert(payload)
-    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'domains', operation: editRow ? 'update' : 'insert' })); return }
     setModalOpen(false)
     fetchData()
   }
@@ -118,7 +122,7 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
     if (!deleteRow) return
     setDeleteLoading(true)
     const { error } = await createClient().from('domains').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'domains', operation: 'delete' })); return }
     setDeleteRow(null)
     setDeleteLoading(false)
     fetchData()
@@ -144,6 +148,7 @@ export function DomainsClient({ initialData, initialCount, canWrite, canEdit }: 
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Domain) : undefined}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canDelete}

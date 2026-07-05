@@ -15,6 +15,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Product, Hardware } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 type FormData = {
   name: string
@@ -50,6 +52,8 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Product | null>(null)
   const [deleteRow, setDeleteRow] = useState<Product | null>(null)
@@ -139,8 +143,8 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Products', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -229,21 +233,23 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
       const { error } = editRow
         ? await supabase.from('Products').update(payload).eq('id', editRow.id)
         : await supabase.from('Products').insert(payload)
-      if (error) { setFormError(t('saveError')); return }
+      if (error) { showError(describeSupabaseError(error, { table: 'Products', operation: editRow ? 'update' : 'insert' })); return }
 
       // Odejmij RÓŻNICĘ z komponentów
       if (boardHw) {
-        await supabase.from('Hardware').update({ stock_qty: boardHw.stock_qty - diff }).eq('id', boardHw.id)
+        const { error: hwError } = await supabase.from('Hardware').update({ stock_qty: boardHw.stock_qty - diff }).eq('id', boardHw.id)
+        if (hwError) showError(describeSupabaseError(hwError, { table: 'Hardware', operation: 'update' }))
       }
       if (obHw) {
-        await supabase.from('Hardware').update({ stock_qty: obHw.stock_qty - diff }).eq('id', obHw.id)
+        const { error: obError } = await supabase.from('Hardware').update({ stock_qty: obHw.stock_qty - diff }).eq('id', obHw.id)
+        if (obError) showError(describeSupabaseError(obError, { table: 'Hardware', operation: 'update' }))
       }
     } else {
       // diff ≤ 0: sprzedaż / korekta w dół — tylko zapisz dane, nie ruszaj Hardware
       const { error } = editRow
         ? await supabase.from('Products').update(payload).eq('id', editRow.id)
         : await supabase.from('Products').insert(payload)
-      if (error) { setFormError(t('saveError')); return }
+      if (error) { showError(describeSupabaseError(error, { table: 'Products', operation: editRow ? 'update' : 'insert' })); return }
     }
 
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
@@ -257,7 +263,7 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Products').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Products', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'warehouse', deleteRow.id, `Produkt: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -278,7 +284,7 @@ export function WarehouseClient({ initialData, initialCount, canWrite, canEdit }
         onEdit={canEdit ? (row) => openEdit(row as unknown as Product) : undefined}
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Product) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canEdit} addLabel={t('emulatory.addLabel')}
-        loadError={loadError} onRetry={fetchData}
+        loadError={loadError} loadErrorDetail={loadErrorDetail} onRetry={fetchData}
         sortKey={sortKey} sortDir={sortDir} onSortChange={handleSort}
         columnFilters={columnFilters}
         onColumnFiltersChange={(f) => { setColumnFilters(f); setPage(1) }}

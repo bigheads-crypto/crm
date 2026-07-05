@@ -16,6 +16,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Software } from '@/lib/supabase/types'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const PRODUCT_LINE_OPTIONS = ['4DPF', 'comfylock']
 const PRODUCT_LINE_COLORS: Record<string, string> = {
@@ -46,6 +48,8 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Software | null>(null)
   const [deleteRow, setDeleteRow] = useState<Software | null>(null)
@@ -113,8 +117,8 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
       .order(sortKey, { ascending: sortDir === 'asc' })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Software', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -152,7 +156,7 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
     const { error } = editRow
       ? await supabase.from('Software').update(payload).eq('id', editRow.id)
       : await supabase.from('Software').insert(payload)
-    if (error) { setFormError(t('saveError')); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Software', operation: editRow ? 'update' : 'insert' })); return }
     const changes = editRow ? computeChanges(editRow as unknown as Record<string, unknown>, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'warehouse-software', editRow?.id ?? null, `Software: ${values.name}`, changes)
     setModalOpen(false)
@@ -164,7 +168,7 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Software').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert(t('deleteError')); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Software', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'warehouse-software', deleteRow.id, `Software: ${deleteRow.name}`)
     setDeleteRow(null)
     setDeleteLoading(false)
@@ -189,6 +193,7 @@ export function SoftwareClient({ initialData, initialCount, canWrite, canEdit }:
         onDelete={canEdit ? (row) => setDeleteRow(row as unknown as Software) : undefined}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}

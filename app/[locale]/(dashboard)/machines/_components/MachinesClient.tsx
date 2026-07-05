@@ -15,6 +15,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges } from '@/lib/activity-log'
 import type { Machine, Role } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 
 const schema = z.object({
   brand: z.string().optional(),
@@ -62,6 +64,8 @@ export function MachinesClient({ initialData, initialCount, role, canWrite, canE
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Machine | null>(null)
   const [deleteRow, setDeleteRow] = useState<Machine | null>(null)
@@ -84,8 +88,8 @@ export function MachinesClient({ initialData, initialCount, role, canWrite, canE
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Machines', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, sortKey, sortDir])
 
@@ -103,7 +107,7 @@ export function MachinesClient({ initialData, initialCount, role, canWrite, canE
     const { error } = editRow
       ? await supabase.from('Machines').update(payload).eq('id', editRow.id)
       : await supabase.from('Machines').insert(payload)
-    if (error) { setFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Machines', operation: editRow ? 'update' : 'insert' })); return }
     const changes = editRow ? computeChanges(editRow, values) : undefined
     void logActivity(supabase, editRow ? 'update' : 'create', 'machines', editRow?.id ?? null, `Maszyna: ${values.brand ?? ''} ${values.model ?? ''}`.trim(), changes)
     setModalOpen(false); fetchData()
@@ -114,7 +118,7 @@ export function MachinesClient({ initialData, initialCount, role, canWrite, canE
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Machines').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania. Spróbuj ponownie.'); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Machines', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'machines', deleteRow.id, `Maszyna: ${deleteRow.brand ?? ''} ${deleteRow.model ?? ''}`.trim())
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
@@ -130,7 +134,7 @@ export function MachinesClient({ initialData, initialCount, role, canWrite, canE
         onEdit={canEdit ? (row) => openEdit(row as unknown as Machine) : undefined}
         onDelete={canDelete ? (row) => setDeleteRow(row as unknown as Machine) : undefined}
         loading={loading} canEdit={canEdit} canDelete={canDelete} addLabel="Dodaj maszynę"
-        loadError={loadError} onRetry={fetchData}
+        loadError={loadError} loadErrorDetail={loadErrorDetail} onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}
         onSortChange={handleSort}

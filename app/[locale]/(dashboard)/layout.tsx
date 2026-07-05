@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Navbar } from '@/components/layout/Navbar'
 import { CallPopupHost } from '@/components/shared/CallPopupHost'
+import { ErrorToastProvider } from '@/components/shared/ErrorToast'
 import { getCurrentUser, getUserProfile } from '@/lib/auth/helpers'
 import { getAllowedTabs } from '@/lib/permissions'
 import type { Role } from '@/lib/supabase/types'
@@ -37,20 +38,22 @@ export default async function DashboardLayout({
   const showCallPopups = role === 'handlowiec' || role === 'admin'
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
-      {/* Sidebar po lewej */}
-      <Sidebar role={role} locale={locale} allowedTabs={allowedTabs} />
+    <ErrorToastProvider>
+      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+        {/* Sidebar po lewej */}
+        <Sidebar role={role} locale={locale} allowedTabs={allowedTabs} />
 
-      {/* Główna część — Navbar + treść */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Navbar userEmail={userEmail} locale={locale} showCallToggle={showCallPopups} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
+        {/* Główna część — Navbar + treść */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Navbar userEmail={userEmail} locale={locale} showCallToggle={showCallPopups} />
+          <main className="flex-1 overflow-y-auto p-6">
+            {children}
+          </main>
+        </div>
+
+        {/* Popupy rozmów telefonicznych (QUO) — globalny overlay */}
+        {showCallPopups && <CallPopupHost salesmanName={profile?.full_name ?? ''} />}
       </div>
-
-      {/* Popupy rozmów telefonicznych (QUO) — globalny overlay */}
-      {showCallPopups && <CallPopupHost salesmanName={profile?.full_name ?? ''} />}
-    </div>
+    </ErrorToastProvider>
   )
 }

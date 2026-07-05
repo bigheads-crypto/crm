@@ -16,6 +16,8 @@ import { StatusBadge } from '@/components/shared/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity, computeChanges, type ActivityChange } from '@/lib/activity-log'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 import type { Client, Sale, Role } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
 import { normalizePhone } from '@/lib/phone'
@@ -70,6 +72,8 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Client | null>(null)
   const [deleteRow, setDeleteRow] = useState<Client | null>(null)
@@ -94,8 +98,14 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range(from, to)
 
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
+    if (error) {
+      setLoadError(true)
+      setLoadErrorDetail(describeSupabaseError(error, { table: 'Clients', operation: 'load' }).detail)
+      setLoading(false)
+      return
+    }
     setLoadError(false)
+    setLoadErrorDetail(undefined)
     setData((rows as Client[]) ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -135,19 +145,23 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
     }
     if (editRow) {
       const { error } = await supabase.from('Clients').update(normalized).eq('id', editRow.id)
-      if (!error) {
-        const changes: ActivityChange[] = computeChanges(editRow, { ...editRow, ...values })
-        void logActivity(supabase, 'update', 'clients', editRow.id, `Edytowano klienta #${editRow.id}`, changes)
-        setModalOpen(false)
-        fetchData()
+      if (error) {
+        showError(describeSupabaseError(error, { table: 'Clients', operation: 'update' }))
+        return
       }
+      const changes: ActivityChange[] = computeChanges(editRow, { ...editRow, ...values })
+      void logActivity(supabase, 'update', 'clients', editRow.id, `Edytowano klienta #${editRow.id}`, changes)
+      setModalOpen(false)
+      fetchData()
     } else {
       const { error } = await supabase.from('Clients').insert(normalized)
-      if (!error) {
-        void logActivity(supabase, 'create', 'clients', null, `Dodano klienta: ${values.client_name ?? values.phone ?? ''}`)
-        setModalOpen(false)
-        fetchData()
+      if (error) {
+        showError(describeSupabaseError(error, { table: 'Clients', operation: 'insert' }))
+        return
       }
+      void logActivity(supabase, 'create', 'clients', null, `Dodano klienta: ${values.client_name ?? values.phone ?? ''}`)
+      setModalOpen(false)
+      fetchData()
     }
   }
 
@@ -155,11 +169,14 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
     if (!deleteRow) return
     const supabase = createClient()
     const { error } = await supabase.from('Clients').delete().eq('id', deleteRow.id)
-    if (!error) {
-      void logActivity(supabase, 'delete', 'clients', deleteRow.id, `Usunięto klienta: ${deleteRow.client_name ?? deleteRow.phone ?? ''}`)
+    if (error) {
+      showError(describeSupabaseError(error, { table: 'Clients', operation: 'delete' }))
       setDeleteRow(null)
-      fetchData()
+      return
     }
+    void logActivity(supabase, 'delete', 'clients', deleteRow.id, `Usunięto klienta: ${deleteRow.client_name ?? deleteRow.phone ?? ''}`)
+    setDeleteRow(null)
+    fetchData()
   }
 
   async function openHistory(client: Client) {
@@ -273,6 +290,7 @@ export function ClientsClient({ initialData, initialCount, canWrite, canEdit }: 
         pageSize={PAGE_SIZE}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         sortKey={sortKey}
         sortDir={sortDir}

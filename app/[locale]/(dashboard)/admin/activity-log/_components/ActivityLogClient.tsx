@@ -8,6 +8,7 @@ import { Modal } from '@/components/shared/Modal'
 import { PageHeader } from '@/components/shared/PageHeader'
 import type { ActivityChange } from '@/lib/activity-log'
 import { PAGE_SIZE_LARGE as PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
 
 interface ActivityLog {
   id: number
@@ -154,6 +155,7 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
   const [actionFilter, setActionFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -163,8 +165,8 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
     if (actionFilter !== 'all') query = query.eq('action', actionFilter)
     query = query.order('created_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'activity_logs', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? [])
     setCount(total ?? 0)
     setLoading(false)
@@ -226,6 +228,18 @@ export function ActivityLogClient({ initialData, initialCount }: Props) {
                     <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                       Nie udało się załadować danych. Sprawdź połączenie i spróbuj ponownie.
                     </span>
+                    {loadErrorDetail && (
+                      <span
+                        className="text-xs rounded px-2 py-1.5"
+                        style={{
+                          fontFamily: 'monospace', color: 'var(--text-muted)',
+                          backgroundColor: 'var(--surface-2)', border: '1px solid var(--border)',
+                          maxWidth: '560px', wordBreak: 'break-word',
+                        }}
+                      >
+                        {loadErrorDetail}
+                      </span>
+                    )}
                     <button
                       onClick={fetchData}
                       className="rounded-lg px-3 py-2 text-sm font-semibold transition-colors"

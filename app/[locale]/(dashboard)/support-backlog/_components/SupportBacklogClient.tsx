@@ -16,6 +16,8 @@ import { applyColumnFilters, type ColumnFilters } from '@/lib/supabase/filters'
 import { logActivity } from '@/lib/activity-log'
 import type { SupportBacklog, SupportBacklogLog } from '@/lib/supabase/types'
 import { PAGE_SIZE } from '@/lib/constants'
+import { describeSupabaseError } from '@/lib/errors'
+import { useErrorToast } from '@/components/shared/ErrorToast'
 import { PlusCircle, ChevronDown, ChevronUp, Link2, Search, Plus, RefreshCw } from 'lucide-react'
 
 const caseSchema = z.object({
@@ -69,6 +71,8 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [loadErrorDetail, setLoadErrorDetail] = useState<string>()
+  const { showError } = useErrorToast()
   const [sortKey, setSortKey] = useState('updated_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [filterOptionsMap, setFilterOptionsMap] = useState<Record<string, string[]>>({})
@@ -172,8 +176,8 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
     query = applyColumnFilters(query, columnFilters)
     query = query.order(sortKey, { ascending: sortDir === 'asc' }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data: rows, count: total, error } = await query
-    if (error) { setLoadError(true); setLoading(false); return }
-    setLoadError(false)
+    if (error) { setLoadError(true); setLoadErrorDetail(describeSupabaseError(error, { table: 'Support Backlog', operation: 'load' }).detail); setLoading(false); return }
+    setLoadError(false); setLoadErrorDetail(undefined)
     setData(rows ?? []); setCount(total ?? 0); setLoading(false)
   }, [page, columnFilters, statusFilter, sortKey, sortDir])
 
@@ -258,7 +262,7 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
       .insert({ ...values, agent: currentUserName, status: values.status || 'open' })
       .select()
       .single()
-    if (error || !created) { setCaseFormError('Błąd zapisu. Spróbuj ponownie.'); return }
+    if (error || !created) { showError(describeSupabaseError(error, { table: 'Support Backlog', operation: 'insert' })); return }
     void logActivity(supabase, 'create', 'support-backlog', created.id, `Backlog: ${values.client_name ?? values.phone ?? '—'}`)
     setAddCaseOpen(false)
     caseForm.reset({})
@@ -273,7 +277,7 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
       .from('Support Backlog')
       .update({ ...values, updated_at: new Date().toISOString() })
       .eq('id', selectedCase.id)
-    if (error) { setCaseUpdateError('Błąd zapisu.'); return }
+    if (error) { showError(describeSupabaseError(error, { table: 'Support Backlog', operation: 'update' })); return }
     void logActivity(supabase, 'update', 'support-backlog', selectedCase.id, `Backlog: ${values.client_name ?? values.phone ?? '—'}`)
     setSelectedCase(prev => prev ? { ...prev, ...values } : prev)
     setEditingCase(false)
@@ -287,11 +291,12 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
     const { error } = await supabase
       .from('Support Backlog Log')
       .insert({ ...values, agent: currentUserName, backlog_id: selectedCase.id })
-    if (error) { setLogFormError('Błąd zapisu. Spróbuj ponownie.'); return }
-    await supabase
+    if (error) { showError(describeSupabaseError(error, { table: 'Support Backlog Log', operation: 'insert' })); return }
+    const { error: touchError } = await supabase
       .from('Support Backlog')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', selectedCase.id)
+    if (touchError) showError(describeSupabaseError(touchError, { table: 'Support Backlog', operation: 'update' }))
     void logActivity(supabase, 'create', 'support-backlog', selectedCase.id, `Wpis: ${values.problem.slice(0, 60)}`)
     logForm.reset({})
     setAddLogOpen(false)
@@ -310,7 +315,7 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
     setDeleteLoading(true)
     const supabase = createClient()
     const { error } = await supabase.from('Support Backlog').delete().eq('id', deleteRow.id)
-    if (error) { setDeleteLoading(false); alert('Błąd usuwania.'); return }
+    if (error) { setDeleteLoading(false); showError(describeSupabaseError(error, { table: 'Support Backlog', operation: 'delete' })); return }
     void logActivity(supabase, 'delete', 'support-backlog', deleteRow.id, `Backlog: ${deleteRow.client_name ?? deleteRow.phone ?? '—'}`)
     setDeleteRow(null); setDeleteLoading(false); fetchData()
   }
@@ -361,6 +366,7 @@ export function SupportBacklogClient({ initialData, initialCount, canWrite, canE
         onDelete={(row) => setDeleteRow(row as unknown as SupportBacklog)}
         loading={loading}
         loadError={loadError}
+        loadErrorDetail={loadErrorDetail}
         onRetry={fetchData}
         canEdit={canEdit}
         canDelete={canEdit}
