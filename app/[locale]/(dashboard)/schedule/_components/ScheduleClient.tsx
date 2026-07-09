@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { ChevronLeft, ChevronRight, Send, CalendarPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Send, CalendarPlus, Clock } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { describeSupabaseError } from '@/lib/errors'
@@ -13,6 +13,7 @@ import { DayEditor } from './DayEditor'
 import { AvailabilityEditor } from './AvailabilityEditor'
 import { SwapsPanel } from './SwapsPanel'
 import { BulkEditor } from './BulkEditor'
+import { ShiftTypesEditor } from './ShiftTypesEditor'
 import type { ShiftType, ScheduleEntry, Availability, ShiftSwap } from '@/lib/supabase/types'
 
 interface SwapEntryInfo {
@@ -69,6 +70,7 @@ export function ScheduleClient({
   const [editorDate, setEditorDate] = useState<string | null>(null)
   const [availEditorDate, setAvailEditorDate] = useState<string | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
+  const [shiftTypesOpen, setShiftTypesOpen] = useState(false)
   const [publishing, setPublishing] = useState(false)
 
   // Pracownik edytuje dostępność tylko we własnym dziale (RLS wymaga department = własna rola).
@@ -318,6 +320,13 @@ export function ScheduleClient({
           >
             <CalendarPlus size={13} /> {t('bulkAdd')}
           </button>
+          <button
+            onClick={() => setShiftTypesOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+          >
+            <Clock size={13} /> {t('shiftTypesEdit')}
+          </button>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('clickHint')}</span>
         </div>
       )}
@@ -504,6 +513,15 @@ export function ScheduleClient({
           availability={editorAvailability}
           onClose={() => setEditorDate(null)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {canManage && shiftTypesOpen && (
+        <ShiftTypesEditor
+          department={department}
+          shiftTypes={shiftTypes}
+          onClose={() => setShiftTypesOpen(false)}
+          onSaved={() => { setShiftTypesOpen(false); router.refresh() }}
         />
       )}
 
