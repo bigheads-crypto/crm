@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ShoppingCart, Users, Cpu, Settings,
   Globe, Server, Shield, Activity, ChevronLeft, ChevronRight, ChevronDown,
   BookMarked, AlertTriangle, ThumbsUp, Package, Layers, Cable, CircuitBoard,
-  FileCode, UserRound, GripVertical, Phone, CalendarDays,
+  FileCode, UserRound, GripVertical, Phone, CalendarDays, Database,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -75,6 +75,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'adminUsers', href: '/admin/users', icon: Settings },
   { key: 'adminPermissions', href: '/admin/permissions', icon: Shield },
   { key: 'activityLog', href: '/admin/activity-log', icon: Activity },
+  { key: 'adminDatabase', href: '/admin/database', icon: Database },
 ]
 
 const DEFAULT_ORDER = NAV_ENTRIES.map(entryId)

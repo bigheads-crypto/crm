@@ -61,6 +61,7 @@ const DEFAULT_VIEW: Record<string, Role[]> = {
   'admin/users': ['admin'],
   'admin/permissions': ['admin'],
   'admin/activity-log': ['admin', 'manager'],
+  'admin/database': ['admin'],
   'clients': ['admin', 'manager', 'handlowiec'],
   'calls': ['admin', 'manager', 'handlowiec'],
 }

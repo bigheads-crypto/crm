@@ -4,6 +4,8 @@
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
+import { checkPublicEnv } from '@/lib/env'
+import { ConfigErrorScreen } from '@/components/shared/ConfigErrorScreen'
 
 const locales = ['pl', 'en']
 
@@ -25,9 +27,13 @@ export default async function LocaleLayout({
   // Załaduj tłumaczenia dla danego locale
   const messages = await getMessages()
 
+  // Walidacja konfiguracji przy starcie: gdy brakuje zmiennych połączenia z bazą,
+  // pokaż czytelny ekran zamiast surowego crasha (wewnątrz providera → i18n działa).
+  const env = checkPublicEnv()
+
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      {children}
+      {env.ok ? children : <ConfigErrorScreen missing={env.missing} />}
     </NextIntlClientProvider>
   )
 }
