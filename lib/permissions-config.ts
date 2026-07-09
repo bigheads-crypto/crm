@@ -22,6 +22,7 @@ export const PERM_TYPES: { key: keyof TabPerms; label: string }[] = [
 
 export const TAB_DEFS: TabDef[] = [
   { key: 'dashboard', label: 'Dashboard' },
+  { key: 'schedule', label: 'Grafik' },
   { key: 'sales', label: 'Zamówienia' },
   { key: 'support-backlog', label: 'Support Backlog' },
   { key: 'candidates', label: 'Kandydaci' },
@@ -43,6 +44,7 @@ export const TAB_DEFS: TabDef[] = [
 // Które role mogą widzieć daną zakładkę (domyślne)
 const DEFAULT_VIEW: Record<string, Role[]> = {
   'dashboard': ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'],
+  'schedule': ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'],
   'sales': ['admin', 'handlowiec', 'logistyka', 'manager'],
   'support-backlog': ['admin', 'support', 'manager'],
   'candidates': ['admin', 'hr', 'manager'],

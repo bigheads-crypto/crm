@@ -34,6 +34,7 @@ const updateRoleSchema = z.object({
   userId: z.string().uuid('Nieprawidłowe userId'),
   role: z.enum(VALID_ROLES),
   full_name: z.string().max(100).nullable().optional(),
+  is_lead: z.boolean().optional(),
 })
 
 const deleteSchema = z.object({
@@ -63,6 +64,7 @@ export async function GET() {
         last_sign_in_at: u.last_sign_in_at,
         role: profile?.role ?? 'handlowiec',
         full_name: profile?.full_name ?? null,
+        is_lead: profile?.is_lead ?? false,
       }
     })
 
@@ -115,9 +117,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (data.action === 'update_role') {
+      const updatePayload: Record<string, unknown> = { role: data.role, full_name: data.full_name || null }
+      if (typeof data.is_lead === 'boolean') updatePayload.is_lead = data.is_lead
       const { error } = await adminClient
         .from('profiles')
-        .update({ role: data.role, full_name: data.full_name || null })
+        .update(updatePayload)
         .eq('id', data.userId)
       if (error) return NextResponse.json({ error: `Profil: ${error.message}` }, { status: 500 })
       return NextResponse.json({ success: true })

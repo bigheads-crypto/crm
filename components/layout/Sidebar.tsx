@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ShoppingCart, Users, Cpu, Settings,
   Globe, Server, Shield, Activity, ChevronLeft, ChevronRight, ChevronDown,
   BookMarked, AlertTriangle, ThumbsUp, Package, Layers, Cable, CircuitBoard,
-  FileCode, UserRound, GripVertical, Phone,
+  FileCode, UserRound, GripVertical, Phone, CalendarDays,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -49,6 +49,7 @@ function entryId(entry: NavEntry) {
 
 const NAV_ENTRIES: NavEntry[] = [
   { key: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { key: 'schedule', href: '/schedule', icon: CalendarDays },
   { key: 'clients', href: '/clients', icon: UserRound },
   { key: 'sales', href: '/sales', icon: ShoppingCart },
   { key: 'calls', href: '/calls', icon: Phone },

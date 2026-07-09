@@ -13,6 +13,20 @@ export const SALE_STATUS_COLORS: Record<string, string> = {
   cancelled: '#ef4444',
 }
 
+// Grafik pracy — działy (= role pracownicze) mające grafik. Admin nie jest
+// działem — używa przełącznika do wyboru któregokolwiek z tych działów.
+export const SCHEDULE_DEPARTMENTS = ['handlowiec', 'support', 'logistyka', 'hr', 'manager'] as const
+export type ScheduleDepartment = (typeof SCHEDULE_DEPARTMENTS)[number]
+
+// Dostępność pracownika — rodzaje i kolory (zielony/czerwony/niebieski).
+export const AVAILABILITY_KINDS = ['available', 'unavailable', 'preferred'] as const
+export type AvailabilityKind = (typeof AVAILABILITY_KINDS)[number]
+export const AVAILABILITY_COLORS: Record<AvailabilityKind, string> = {
+  available: '#22c55e',
+  unavailable: '#ef4444',
+  preferred: '#3b82f6',
+}
+
 // Statusy rozmów telefonicznych (QUO) — popup + zakładka Rozmowy.
 export const CALL_STATUS_OPTIONS = ['ringing', 'completed', 'missed']
 

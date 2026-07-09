@@ -29,6 +29,7 @@ interface UserRow {
   last_sign_in_at: string | null
   role: Role
   full_name: string | null
+  is_lead: boolean
 }
 
 function RoleBadge({ role }: { role: Role }) {
@@ -45,6 +46,7 @@ const COLUMNS: Column<UserRow>[] = [
   { key: 'email', header: 'Email' },
   { key: 'full_name', header: 'Imię i nazwisko' },
   { key: 'role', header: 'Rola', render: (v) => <RoleBadge role={v as Role} /> },
+  { key: 'is_lead', header: 'Kierownik działu', render: (v) => v ? <span style={{ color: 'var(--accent)' }}>✓</span> : <span style={{ color: 'var(--text-muted)' }}>—</span> },
   { key: 'last_sign_in_at', header: 'Ostatnie logowanie', render: (v) => v ? new Date(String(v)).toLocaleString('pl-PL') : 'Nigdy' },
   { key: 'created_at', header: 'Utworzono', render: (v) => v ? new Date(String(v)).toLocaleDateString('pl-PL') : '—' },
 ]
@@ -56,6 +58,7 @@ export function AdminUsersClient() {
   const [editUser, setEditUser] = useState<UserRow | null>(null)
   const [editRole, setEditRole] = useState<Role>('handlowiec')
   const [editName, setEditName] = useState('')
+  const [editLead, setEditLead] = useState(false)
   const [editSaving, setEditSaving] = useState(false)
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -101,7 +104,7 @@ export function AdminUsersClient() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_role', userId: editUser.id, role: editRole, full_name: editName }),
+        body: JSON.stringify({ action: 'update_role', userId: editUser.id, role: editRole, full_name: editName, is_lead: editLead }),
       })
       const json = await res.json()
       if (!res.ok) { setError(json.error || 'Błąd zapisu'); setEditSaving(false); return }
@@ -125,7 +128,7 @@ export function AdminUsersClient() {
   }
 
   const openEdit = (user: UserRow) => {
-    setEditUser(user); setEditRole(user.role); setEditName(user.full_name ?? '')
+    setEditUser(user); setEditRole(user.role); setEditName(user.full_name ?? ''); setEditLead(user.is_lead)
   }
 
   return (
@@ -193,6 +196,10 @@ export function AdminUsersClient() {
               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </FormField>
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>
+            <input type="checkbox" checked={editLead} onChange={e => setEditLead(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
+            Kierownik działu (układa grafik swojego działu)
+          </label>
           <div className="flex justify-end gap-2 mt-2">
             <button onClick={() => setEditUser(null)} className="px-4 py-2 text-sm rounded-lg" style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}>Anuluj</button>
             <button onClick={onUpdateRole} disabled={editSaving} className="px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-60" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>

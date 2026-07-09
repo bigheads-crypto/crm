@@ -2,12 +2,74 @@
 
 export type Role = 'admin' | 'handlowiec' | 'support' | 'hr' | 'logistyka' | 'manager'
 
+// Grafik pracy — typy zmian (per dział)
+export interface ShiftType {
+  id: number
+  created_at: string
+  department: string
+  name: string
+  start_time: string | null
+  end_time: string | null
+  color: string | null
+}
+
+export type ShiftTypeInsert = Omit<ShiftType, 'id' | 'created_at'>
+export type ShiftTypeUpdate = Partial<ShiftTypeInsert>
+
+// Grafik pracy — wpis grafiku (kto / kiedy / jaka zmiana)
+export interface ScheduleEntry {
+  id: number
+  created_at: string
+  user_id: string
+  work_date: string
+  shift_type_id: number | null
+  department: string
+  status: 'draft' | 'published'
+  note: string | null
+  created_by: string | null
+}
+
+export type ScheduleEntryInsert = Omit<ScheduleEntry, 'id' | 'created_at'>
+export type ScheduleEntryUpdate = Partial<ScheduleEntryInsert>
+
+// Grafik pracy — dostępność wpisywana przez pracownika
+export interface Availability {
+  id: number
+  created_at: string
+  user_id: string
+  work_date: string
+  department: string
+  kind: 'available' | 'unavailable' | 'preferred'
+  shift_pref: number | null
+  note: string | null
+}
+
+export type AvailabilityInsert = Omit<Availability, 'id' | 'created_at'>
+export type AvailabilityUpdate = Partial<AvailabilityInsert>
+
+// Grafik pracy — zamiany dniówek
+export type ShiftSwapStatus = 'pending' | 'accepted' | 'rejected' | 'approved' | 'cancelled'
+
+export interface ShiftSwap {
+  id: number
+  created_at: string
+  department: string
+  requester_id: string
+  requester_entry_id: number
+  target_id: string
+  target_entry_id: number
+  status: ShiftSwapStatus
+  resolved_by: string | null
+  resolved_at: string | null
+}
+
 // Tabela profiles (rozszerzenie Supabase Auth)
 export interface Profile {
   id: string
   role: Role
   full_name: string | null
   created_at: string
+  is_lead: boolean
 }
 
 // Maszyny budowlane
