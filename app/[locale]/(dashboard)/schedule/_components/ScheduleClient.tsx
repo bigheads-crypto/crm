@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { ChevronLeft, ChevronRight, Send } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Send, CalendarPlus } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { createClient } from '@/lib/supabase/client'
 import { describeSupabaseError } from '@/lib/errors'
@@ -12,6 +12,7 @@ import { AVAILABILITY_COLORS, type AvailabilityKind } from '@/lib/constants'
 import { DayEditor } from './DayEditor'
 import { AvailabilityEditor } from './AvailabilityEditor'
 import { SwapsPanel } from './SwapsPanel'
+import { BulkEditor } from './BulkEditor'
 import type { ShiftType, ScheduleEntry, Availability, ShiftSwap } from '@/lib/supabase/types'
 
 interface SwapEntryInfo {
@@ -67,6 +68,7 @@ export function ScheduleClient({
   const [view, setView] = useState<'schedule' | 'availability' | 'swaps'>('schedule')
   const [editorDate, setEditorDate] = useState<string | null>(null)
   const [availEditorDate, setAvailEditorDate] = useState<string | null>(null)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [publishing, setPublishing] = useState(false)
 
   // Pracownik edytuje dostępność tylko we własnym dziale (RLS wymaga department = własna rola).
@@ -309,6 +311,13 @@ export function ScheduleClient({
               <Send size={13} /> {publishing ? t('publishing') : t('publish')}
             </button>
           )}
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+          >
+            <CalendarPlus size={13} /> {t('bulkAdd')}
+          </button>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('clickHint')}</span>
         </div>
       )}
@@ -495,6 +504,19 @@ export function ScheduleClient({
           availability={editorAvailability}
           onClose={() => setEditorDate(null)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {canManage && bulkOpen && (
+        <BulkEditor
+          department={department}
+          month={month}
+          daysInMonth={daysInMonth}
+          employees={employees}
+          shiftTypes={shiftTypes}
+          currentUserId={currentUserId}
+          onClose={() => setBulkOpen(false)}
+          onSaved={() => { setBulkOpen(false); router.refresh() }}
         />
       )}
 
