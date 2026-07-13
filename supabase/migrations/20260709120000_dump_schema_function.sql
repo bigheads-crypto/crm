@@ -20,7 +20,13 @@ STABLE
 SECURITY DEFINER
 SET search_path TO 'pg_catalog'
 AS $dump$
-  SELECT string_agg(ddl, E'\n\n' ORDER BY ord, tbl, sub)
+  -- Kolejność: ord → sub → tbl. `sub` PRZED `tbl` jest kluczowe dla ograniczeń
+  -- (ord=2): wszystkie PK/UNIQUE (sub 1–2) muszą powstać przed jakimkolwiek FK
+  -- (sub=4), bo FK wymaga istniejącego UNIQUE/PK w tabeli docelowej. Przy sortowaniu
+  -- po tbl-najpierw FK tabeli „A"→„Z" trafiał przed PK tabeli „Z" i odtwarzanie padało
+  -- („no unique constraint matching given keys"). W innych blokach sub=0, więc
+  -- kolejność alfabetyczna po tbl zostaje bez zmian.
+  SELECT string_agg(ddl, E'\n\n' ORDER BY ord, sub, tbl)
   FROM (
     -- preambuła
     SELECT -1 AS ord, ''::text AS tbl, 0 AS sub,
