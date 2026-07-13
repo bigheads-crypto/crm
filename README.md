@@ -13,6 +13,5 @@ Aplikacja: <http://localhost:3000>.
 
 ## Dokumentacja
 
-- **`CLAUDE.md`** — instrukcje dla agenta AI (reguły zachowania, konwencje twarde)
 - **`DOCS.md`** — pełna referencja techniczna (stack, struktura plików, tabele DB, komponenty shared, design system, znane pułapki)
 - **`TODO.md`** — otwarte poprawki z przeglądu kodu
