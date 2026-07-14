@@ -11,6 +11,12 @@
 --
 -- Preambuła zrzutu ustawia check_function_bodies = false, więc kolejność funkcji
 -- odwołujących się do siebie / do tabel nie ma znaczenia przy odtwarzaniu.
+--
+-- Sekcje zrzutu (kolejnosc odtwarzania): 0) sekwencje, 1) tabele, 2) ograniczenia
+-- (PK/UNIQUE→CHECK→FK), 3) indeksy, 4) funkcje, 5) triggery, 6) RLS, 7) polityki,
+-- 8) GRANT-y dla rol API, 9) Realtime (publikacja supabase_realtime). Sekcja 8 jest
+-- niezbedna — bez niej role anon/authenticated nie maja dostepu do tabel
+-- („permission denied"). Sekcja 9 przywraca nadawanie zdarzen Realtime (popupy rozmow).
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.dump_schema()
@@ -119,6 +125,38 @@ AS $dump$
       || COALESCE(' WITH CHECK (' || p.with_check || ')', '') || ';'
     FROM pg_policies p
     WHERE p.schemaname = 'public'
+
+    UNION ALL
+    -- 8) uprawnienia tabelowe dla rol API (Supabase: anon / authenticated / service_role).
+    --    KLUCZOWE dla odtwarzalnosci: GRANT daje rolom dostep do tabeli, a RLS (sekcje 6–7)
+    --    dopiero filtruje wiersze. Bez tych GRANT-ow odtworzona baza ma RLS + polityki, ale
+    --    aplikacja jako `authenticated` dostaje „permission denied for table ..." i np. nie
+    --    czyta profilu → petla redirectow na dashboard. GRANT ALL jest bezpieczny, bo `anon`
+    --    bez polityki i tak nic nie zrobi (RLS domyslnie odmawia).
+    --    Domyslne uprawnienia (ALTER DEFAULT PRIVILEGES) tylko dla TABLES/SEQUENCES — celowo
+    --    NIE dla ROUTINES, zeby pozniej odtworzona SECURITY DEFINER `dump_schema()` nie zostala
+    --    automatycznie wystawiona rolom API (jej wlasny GRANT ustawia sekcja ponizej).
+    SELECT 8, ''::text, 0,
+      E'-- Uprawnienia rol API (RLS nadal filtruje wiersze)\n'
+      || E'GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;\n'
+      || E'GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role;\n'
+      || E'GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;\n'
+      || E'GRANT ALL ON ALL ROUTINES  IN SCHEMA public TO anon, authenticated, service_role;\n'
+      || E'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES    TO anon, authenticated, service_role;\n'
+      || E'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;'
+
+    UNION ALL
+    -- 9) Realtime — czlonkostwo tabel w publikacji `supabase_realtime`. Publikacja to
+    --    obiekt globalny (poza schematem public), a informacja „ktora tabela nadaje"
+    --    siedzi w pg_publication_tables — nie w katalogach z sekcji 0–8. Bez tego
+    --    odtworzona baza ma tabele, ale Realtime nie emituje zdarzen → np. popupy
+    --    rozmow (hook na tabeli `calls`) nie odswiezaja sie na zywo.
+    --    `supabase_realtime` istnieje na kazdym projekcie Supabase, wiec samo dodanie
+    --    tabeli wystarcza (na czystym projekcie tabela nie jest jeszcze czlonkiem).
+    SELECT 9, pt.tablename, 0,
+      'ALTER PUBLICATION supabase_realtime ADD TABLE public.' || quote_ident(pt.tablename) || ';'
+    FROM pg_publication_tables pt
+    WHERE pt.pubname = 'supabase_realtime' AND pt.schemaname = 'public'
   ) x;
 $dump$;
 
