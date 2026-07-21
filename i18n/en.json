@@ -295,6 +295,8 @@
       "folderName": "Folder name",
       "folderDeleteTitle": "Delete folder",
       "folderDeleteDesc": "Delete folder \"{name}\"?",
+      "folderRename": "Rename",
+      "folderRenameTitle": "Rename folder",
       "colFolder": "Folder",
       "searchResults": "Search results",
       "colFiles": "Files",

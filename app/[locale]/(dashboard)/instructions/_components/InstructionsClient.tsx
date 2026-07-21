@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslations } from 'next-intl'
-import { Search, Folder, FolderPlus, ChevronRight, Home, Trash2, Upload, Download, Archive, Paperclip } from 'lucide-react'
+import { Search, Folder, FolderPlus, ChevronRight, Home, Trash2, Upload, Download, Archive, Paperclip, Pencil } from 'lucide-react'
 import { DataTable, Column } from '@/components/shared/DataTable'
 import { Modal } from '@/components/shared/Modal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -26,6 +26,7 @@ const schema = z.object({
   title: z.string().min(1),
   notes: z.string().optional(),
   status: z.enum(['active', 'archived']),
+  version: z.number().int().min(1),
 })
 type FormData = z.infer<typeof schema>
 type Lang = 'pl' | 'en' | 'es'
@@ -89,6 +90,10 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
   const [folderError, setFolderError] = useState<string | null>(null)
   const [deleteFolderRow, setDeleteFolderRow] = useState<InstructionFolder | null>(null)
   const [deleteFolderLoading, setDeleteFolderLoading] = useState(false)
+  const [renameFolderRow, setRenameFolderRow] = useState<InstructionFolder | null>(null)
+  const [renameFolderName, setRenameFolderName] = useState('')
+  const [renameSubmitting, setRenameSubmitting] = useState(false)
+  const [renameError, setRenameError] = useState<string | null>(null)
 
   // Nowa wersja pliku (przycisk ⬆)
   const [uploadRow, setUploadRow] = useState<Instruction | null>(null)
@@ -158,7 +163,7 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { status: 'active' },
+    defaultValues: { status: 'active', version: 1 },
   })
 
   const fetchData = useCallback(async () => {
@@ -204,12 +209,12 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
 
   // ── Instrukcja: dodaj (nazwa + lokalizacja + język + plik) / edytuj (metadane) ──
   const openAdd = () => {
-    reset({ title: '', notes: '', status: 'active' })
+    reset({ title: '', notes: '', status: 'active', version: 1 })
     setEditRow(null); setFormFolderId(currentFolderId); setFormLang('pl'); setFormFile(null); setFileError(null)
     setModalOpen(true)
   }
   const openEdit = (row: Instruction) => {
-    reset({ title: row.title ?? '', notes: row.notes ?? '', status: row.status })
+    reset({ title: row.title ?? '', notes: row.notes ?? '', status: row.status, version: row.version ?? 1 })
     setEditRow(row); setFormFolderId(row.folder_id); setFormLang((row.language as Lang) ?? 'pl'); setFormFile(null); setFileError(null)
     setModalOpen(true)
   }
@@ -224,6 +229,7 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
       status: values.status,
       language: formLang,
       folder_id: formFolderId,
+      version: values.version,
       updated_at: new Date().toISOString(),
     }
 
@@ -236,11 +242,11 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
       return
     }
 
-    const { data: created, error } = await supabase.from('Instructions').insert({ ...meta, version: 1 }).select('id').single()
+    const { data: created, error } = await supabase.from('Instructions').insert({ ...meta }).select('id').single()
     if (error || !created) { setSaving(false); showError(describeSupabaseError(error ?? { message: 'insert failed' }, { table: 'Instructions', operation: 'insert' })); return }
     const id = created.id as number
     const file = formFile as File
-    const path = versionPath(id, 1, fileExt(file.name))
+    const path = versionPath(id, values.version, fileExt(file.name))
     const up = await uploadObject(supabase, path, file)
     if (up.error) { setSaving(false); showError(describeSupabaseError(up.error, { table: 'storage', operation: 'insert' })); return }
     const { data: auth } = await supabase.auth.getUser()
@@ -290,6 +296,22 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
     }
     void logActivity(supabase, 'delete', 'instructions', deleteFolderRow.id, `${t('folderNew')}: ${deleteFolderRow.name}`)
     setDeleteFolderRow(null); refreshFolders()
+  }
+
+  const openRenameFolder = (f: InstructionFolder) => { setRenameFolderRow(f); setRenameFolderName(f.name); setRenameError(null) }
+
+  const onRenameFolder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!renameFolderRow) return
+    const name = renameFolderName.trim()
+    if (!name) { setRenameError(t('required')); return }
+    setRenameSubmitting(true); setRenameError(null)
+    const supabase = createClient()
+    const { error } = await supabase.from('Instruction Folders').update({ name }).eq('id', renameFolderRow.id)
+    setRenameSubmitting(false)
+    if (error) { showError(describeSupabaseError(error, { table: 'Instruction Folders', operation: 'update' })); return }
+    void logActivity(supabase, 'update', 'instructions', renameFolderRow.id, `${t('folderNew')}: ${name}`)
+    setRenameFolderRow(null); refreshFolders()
   }
 
   // ── Nowa wersja pliku ──────────────────────────────────────────────────────
@@ -447,6 +469,16 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
                 <Folder size={16} style={{ color: 'var(--accent)' }} />
                 {f.name}
               </button>
+              {canEdit && (
+                <button
+                  onClick={() => openRenameFolder(f)}
+                  title={t('folderRename')}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', display: 'inline-flex' }}
+                >
+                  <Pencil size={13} />
+                </button>
+              )}
               {canDelete && (
                 <button
                   onClick={() => setDeleteFolderRow(f)}
@@ -526,6 +558,9 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
               <option value="archived">{t('statusArchived')}</option>
             </select>
           </FormField>
+          <FormField label={t('colVersion')}>
+            <input type="number" min={1} {...register('version', { valueAsNumber: true })} style={inputStyle} />
+          </FormField>
           <FormField label={t('notes')}><input {...register('notes')} style={inputStyle} /></FormField>
           {!editRow && (
             <FormField label={t('file')} error={fileError ?? undefined}>
@@ -550,6 +585,22 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
             />
           </FormField>
           <FormActions onCancel={() => setFolderModalOpen(false)} isSubmitting={folderSubmitting} />
+        </form>
+      </Modal>
+
+      {/* Modal zmiany nazwy folderu */}
+      <Modal open={!!renameFolderRow} onClose={() => setRenameFolderRow(null)} title={t('folderRenameTitle')} size="sm">
+        <form onSubmit={onRenameFolder} className="flex flex-col gap-4">
+          <FormField label={t('folderName')} error={renameError ?? undefined}>
+            <input
+              value={renameFolderName}
+              onChange={(e) => { setRenameFolderName(e.target.value); setRenameError(null) }}
+              style={inputStyle}
+              autoFocus
+              autoComplete="off"
+            />
+          </FormField>
+          <FormActions onCancel={() => setRenameFolderRow(null)} isSubmitting={renameSubmitting} />
         </form>
       </Modal>
 

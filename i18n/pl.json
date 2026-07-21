@@ -295,6 +295,8 @@
       "folderName": "Nazwa folderu",
       "folderDeleteTitle": "Usuń folder",
       "folderDeleteDesc": "Usunąć folder „{name}”?",
+      "folderRename": "Zmień nazwę",
+      "folderRenameTitle": "Zmień nazwę folderu",
       "colFolder": "Folder",
       "searchResults": "Wyniki wyszukiwania",
       "colFiles": "Pliki",
