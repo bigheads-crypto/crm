@@ -76,7 +76,7 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
   const [modalOpen, setModalOpen] = useState(false)
   const [editRow, setEditRow] = useState<Instruction | null>(null)
   const [formFolderId, setFormFolderId] = useState<number | null>(null)
-  const [formLang, setFormLang] = useState<Lang>('pl')
+  const [formLang, setFormLang] = useState<Lang>('en')
   const [formFile, setFormFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -210,7 +210,7 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
   // ── Instrukcja: dodaj (nazwa + lokalizacja + język + plik) / edytuj (metadane) ──
   const openAdd = () => {
     reset({ title: '', notes: '', status: 'active', version: 1 })
-    setEditRow(null); setFormFolderId(currentFolderId); setFormLang('pl'); setFormFile(null); setFileError(null)
+    setEditRow(null); setFormFolderId(currentFolderId); setFormLang('en'); setFormFile(null); setFileError(null)
     setModalOpen(true)
   }
   const openEdit = (row: Instruction) => {
@@ -553,12 +553,14 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
               <option value="es">ES</option>
             </select>
           </FormField>
-          <FormField label={t('status')}>
-            <select {...register('status')} style={inputStyle}>
-              <option value="active">{t('statusActive')}</option>
-              <option value="archived">{t('statusArchived')}</option>
-            </select>
-          </FormField>
+          {editRow && (
+            <FormField label={t('status')}>
+              <select {...register('status')} style={inputStyle}>
+                <option value="active">{t('statusActive')}</option>
+                <option value="archived">{t('statusArchived')}</option>
+              </select>
+            </FormField>
+          )}
           <FormField label={t('colVersion')}>
             <input type="number" min={1} step={0.1} {...register('version', { valueAsNumber: true })} style={inputStyle} />
           </FormField>
