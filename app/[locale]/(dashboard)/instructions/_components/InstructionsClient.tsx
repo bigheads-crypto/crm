@@ -26,7 +26,7 @@ const schema = z.object({
   title: z.string().min(1),
   notes: z.string().optional(),
   status: z.enum(['active', 'archived']),
-  version: z.number().int().min(1),
+  version: z.number().min(1),
 })
 type FormData = z.infer<typeof schema>
 type Lang = 'pl' | 'en' | 'es'
@@ -161,7 +161,7 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
     return [{ id: null as number | null, label: t('rootLocation') }, ...opts]
   }, [allFolders, folderPath, t])
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { status: 'active', version: 1 },
   })
@@ -324,7 +324,8 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
     setUploading(true); setUploadError(null)
     const supabase = createClient()
     const id = uploadRow.id
-    const version = (uploadRow.version ?? 1) + 1
+    // Wersje dziesiętne: inkrementacja o 0.1 (z zaokrągleniem, by uniknąć błędów float).
+    const version = Math.round((Number(uploadRow.version ?? 1) + 0.1) * 10) / 10
     const path = versionPath(id, version, fileExt(uploadFile.name))
     const up = await uploadObject(supabase, path, uploadFile)
     if (up.error) { setUploading(false); showError(describeSupabaseError(up.error, { table: 'storage', operation: 'insert' })); return }
@@ -393,7 +394,7 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
     render: (v) => (v ? String(v).toUpperCase() : '—'),
   }
   const versionCol: Column<Instruction> = {
-    key: 'version', header: t('colVersion'), render: (v) => `v${v ?? 1}`,
+    key: 'version', header: t('colVersion'), render: (v) => `v${v == null ? 1 : Number(v)}`,
   }
   const statusCol: Column<Instruction> = {
     key: 'status', header: t('status'), filterOptions: ['active', 'archived'],
@@ -559,12 +560,20 @@ export function InstructionsClient({ initialData, initialCount, initialFolders, 
             </select>
           </FormField>
           <FormField label={t('colVersion')}>
-            <input type="number" min={1} {...register('version', { valueAsNumber: true })} style={inputStyle} />
+            <input type="number" min={1} step={0.1} {...register('version', { valueAsNumber: true })} style={inputStyle} />
           </FormField>
           <FormField label={t('notes')}><input {...register('notes')} style={inputStyle} /></FormField>
           {!editRow && (
             <FormField label={t('file')} error={fileError ?? undefined}>
-              <FileDropzone file={formFile} onChange={(f) => { setFormFile(f); setFileError(null) }} hint={t('dropHint')} />
+              <FileDropzone
+                file={formFile}
+                onChange={(f) => {
+                  setFormFile(f); setFileError(null)
+                  // Auto-nazwa z nazwy pliku (bez rozszerzenia), gdy pole nazwy puste.
+                  if (f && !getValues('title')?.trim()) setValue('title', f.name.replace(/\.[^.]+$/, ''))
+                }}
+                hint={t('dropHint')}
+              />
             </FormField>
           )}
           <FormActions onCancel={() => setModalOpen(false)} isSubmitting={saving} />
