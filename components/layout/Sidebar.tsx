@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 import {
   LayoutDashboard, ShoppingCart, Users, Cpu, Settings,
   Globe, Server, Shield, Activity, ChevronLeft, ChevronRight, ChevronDown,
-  BookMarked, AlertTriangle, ThumbsUp, Package, Layers, Cable, CircuitBoard,
+  BookMarked, BookOpen, AlertTriangle, ThumbsUp, Package, Layers, Cable, CircuitBoard,
   FileCode, UserRound, GripVertical, Phone, CalendarDays, Database,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -57,6 +57,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { key: 'candidates', href: '/candidates', icon: Users },
   { key: 'machines', href: '/machines', icon: Cpu },
   { key: 'machineIssues', href: '/machine-issues', icon: AlertTriangle },
+  { key: 'instructions', href: '/instructions', icon: BookOpen },
   { key: 'reviews', href: '/reviews', icon: ThumbsUp },
   {
     groupKey: 'warehouse',

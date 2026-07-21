@@ -470,3 +470,35 @@ export interface SupportBacklogLog {
 
 export type SupportBacklogLogInsert = Omit<SupportBacklogLog, 'id' | 'created_at'>
 export type SupportBacklogLogUpdate = Partial<SupportBacklogLogInsert>
+
+// Instrukcje — folder w drzewie (Kubota → DPF only → …). parent_id = null → korzeń.
+export interface InstructionFolder {
+  id: number
+  created_at: string
+  parent_id: number | null
+  name: string
+}
+
+export type InstructionFolderInsert = Omit<InstructionFolder, 'id' | 'created_at'>
+export type InstructionFolderUpdate = Partial<InstructionFolderInsert>
+
+// Instrukcje — wpis-plik w folderze. Każdy plik = osobny wpis (nie para SVG+PDF).
+// Typ pliku wynika z rozszerzenia `file_name`. Poprzednie wersje żyją w Storage
+// pod ścieżkami {id}/v{n}.{ext} (Archiwum).
+export interface Instruction {
+  id: number
+  created_at: string
+  updated_at: string
+  folder_id: number | null
+  title: string | null
+  notes: string | null
+  language: 'pl' | 'en' | 'es' | null
+  version: number
+  file_path: string | null
+  file_name: string | null
+  status: 'active' | 'archived'
+  uploaded_by: string | null
+}
+
+export type InstructionInsert = Omit<Instruction, 'id' | 'created_at' | 'updated_at'>
+export type InstructionUpdate = Partial<InstructionInsert>

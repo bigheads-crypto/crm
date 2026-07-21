@@ -28,6 +28,7 @@ export const TAB_DEFS: TabDef[] = [
   { key: 'candidates', label: 'Kandydaci' },
   { key: 'machines', label: 'Maszyny' },
   { key: 'machine-issues', label: 'Problemy maszyn' },
+  { key: 'instructions', label: 'Instrukcje' },
   { key: 'reviews', label: 'Opinie' },
   { key: 'domains', label: 'Domeny' },
   { key: 'hostings', label: 'Hostingi' },
@@ -50,6 +51,9 @@ const DEFAULT_VIEW: Record<string, Role[]> = {
   'candidates': ['admin', 'hr', 'manager'],
   'machines': ['admin', 'handlowiec', 'logistyka', 'manager'],
   'machine-issues': ['admin', 'handlowiec', 'support', 'logistyka', 'manager'],
+  // Instrukcje — podgląd dla wszystkich („każdy ma dostęp"). Ograniczenie
+  // wpisywania/edycji do admina + wybranych ról ustawia się w panelu Uprawnień.
+  'instructions': ['admin', 'manager', 'handlowiec', 'support', 'hr', 'logistyka'],
   'reviews': ['admin', 'support', 'manager'],
   'domains': ['admin', 'manager'],
   'hostings': ['admin', 'manager'],
